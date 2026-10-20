@@ -32,6 +32,8 @@ THEME_FILES = (
     "preview-toolbar.png",
     "preview-annotation-menu.png",
     "preview-selection-idea.png",
+    "assets/annotate.gif",
+    "assets/review-export.gif",
     "examples/阅读与排版示例.md",
     "examples/划线与备注示例.md",
 )
@@ -48,6 +50,8 @@ SOURCE_URL = "https://github.com/bufan1024/obsidian-inkstone/blob/main/"
 AI_INSTALL_URL = SOURCE_URL + "README.md#用-codex--ai-安装"
 RELEASE_DOC_LINKS = {
     "annotations/README.md": SOURCE_URL + "annotations/README.md",
+    "annotations/README.md#当前笔记侧栏与摘录导出": SOURCE_URL + "annotations/README.md#当前笔记侧栏与摘录导出",
+    "annotations/README.md#完整命令与撤销": SOURCE_URL + "annotations/README.md#完整命令与撤销",
     "scripts/install.py": SOURCE_URL + "scripts/install.py",
     "scripts/package.py": SOURCE_URL + "scripts/package.py",
     "tests/native/README.md": SOURCE_URL + "tests/native/README.md",
