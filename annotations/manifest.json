@@ -1,0 +1,9 @@
+{
+  "id": "inkstone-annotations",
+  "name": "墨读标注 Inkstone Annotations",
+  "version": "1.0.0",
+  "minAppVersion": "1.10.6",
+  "description": "为选中文字添加下划线、四色高亮和脚注备注，支持彩色与墨水屏显示。",
+  "author": "Inkstone contributors",
+  "isDesktopOnly": false
+}

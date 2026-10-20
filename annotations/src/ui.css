@@ -1,0 +1,42 @@
+.modal.inkstone-annotation-modal {
+  width: min(560px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+}
+
+.inkstone-annotation-modal h2 { margin-top: 0; font-size: 22px; }
+.inkstone-dialog-description,
+.inkstone-dialog-hint { color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.inkstone-dialog-hint { margin-bottom: 0; }
+.inkstone-selection-preview {
+  margin: 20px 0;
+  padding: 4px 0 4px 16px;
+  border-inline-start: 2px solid var(--text-muted);
+  font-family: var(--font-text);
+  font-size: 17px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.inkstone-annotation-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.inkstone-annotation-choice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  color: var(--text-normal);
+  background: var(--background-primary);
+  box-shadow: none;
+}
+.inkstone-annotation-choice.is-selected { border: 2px solid var(--text-normal); padding: 5px 9px; font-weight: 600; }
+.inkstone-annotation-swatch { width: 18px; height: 18px; border-radius: 2px; flex: 0 0 auto; }
+.inkstone-annotation-underline-swatch { text-decoration: underline; text-underline-offset: 3px; font-family: serif; }
+.inkstone-annotation-modal .setting-item:has(textarea) { display: block; }
+.inkstone-annotation-modal .setting-item:has(textarea) .setting-item-control { margin-top: 12px; }
+.inkstone-annotation-modal textarea { width: 100%; min-height: 112px; font-size: 14px; line-height: 1.6; resize: vertical; }
+.inkstone-annotation-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.inkstone-annotation-actions button { min-height: 40px; }
+.inkstone-annotation-error { color: var(--text-error); font-size: 13px; line-height: 1.5; }
+.inkstone-annotation-error:not(:empty) { border-inline-start: 2px solid currentColor; padding: 8px 12px; }

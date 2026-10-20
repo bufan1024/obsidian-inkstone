@@ -1,0 +1,570 @@
+/*
+ * Inkstone / 墨读 1.2.0 — a quiet, monochrome reading theme.
+ * Light mode only. Uses Obsidian's native font overrides and readable-line-width setting.
+ * No network resources, scripts, or plugin dependencies. License: MIT.
+ */
+
+/* Change these values in a CSS snippet to tune the reading experience. */
+body.theme-light {
+  --inkstone-font-size: 18px;
+  --inkstone-line-height: 1.75;
+  --inkstone-line-width: 40em;
+  /* A small, shared scale: spacing groups content; strokes identify controls. */
+  --inkstone-space-1: 4px;
+  --inkstone-space-2: 8px;
+  --inkstone-space-3: 12px;
+  --inkstone-space-4: 16px;
+  --inkstone-space-6: 24px;
+  --inkstone-space-8: 32px;
+  --inkstone-radius-xs: 2px;
+  --inkstone-radius-sm: 4px;
+  --inkstone-radius-md: 8px;
+  --inkstone-paper: #ffffff;
+  --inkstone-paper-alt: #f7f7f7;
+  --inkstone-ink: #202020;
+  --inkstone-muted: #555555;
+  --inkstone-faint: #686868;
+  --inkstone-rule: #c7c7c7;
+  --inkstone-rule-strong: #777777;
+  --inkstone-selection: #d8d8d8;
+  --inkstone-mark: #e6e6e6;
+  --inkstone-reading-font: "Iowan Old Style", "Palatino Linotype", "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong", "SimSun", serif;
+
+  /* Native overrides from Settings → Appearance keep their precedence. */
+  --font-text-theme: var(--inkstone-reading-font);
+  --font-monospace-theme: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --font-text-size: var(--inkstone-font-size);
+  --line-height-normal: var(--inkstone-line-height);
+  --line-height-tight: 1.45;
+  --file-line-width: var(--inkstone-line-width);
+  --file-margins: var(--inkstone-space-8) clamp(24px, 5vw, 64px) 64px;
+  --p-spacing: var(--inkstone-space-6);
+
+  /* An opaque grayscale palette keeps meaning visible without hue. */
+  --color-base-00: var(--inkstone-paper);
+  --color-base-05: #fafafa;
+  --color-base-10: var(--inkstone-paper-alt);
+  --color-base-20: #eeeeee;
+  --color-base-25: #e1e1e1;
+  --color-base-30: var(--inkstone-rule);
+  --color-base-35: #a3a3a3;
+  --color-base-40: var(--inkstone-rule-strong);
+  --color-base-50: var(--inkstone-faint);
+  --color-base-60: var(--inkstone-muted);
+  --color-base-70: #444444;
+  --color-base-100: var(--inkstone-ink);
+  --color-accent: var(--inkstone-ink);
+  --color-accent-1: var(--inkstone-ink);
+  --color-accent-2: #444444;
+  --color-accent-hsl: 0, 0%, 13%;
+  --interactive-accent-hsl: 0, 0%, 13%;
+
+  --background-primary: var(--inkstone-paper);
+  --background-primary-alt: var(--inkstone-paper-alt);
+  --background-secondary: var(--inkstone-paper-alt);
+  --background-secondary-alt: #eeeeee;
+  --background-modifier-hover: #eeeeee;
+  --background-modifier-active-hover: #e4e4e4;
+  --background-modifier-border: var(--inkstone-rule);
+  --background-modifier-border-hover: var(--inkstone-rule-strong);
+  --background-modifier-border-focus: var(--inkstone-ink);
+  --background-modifier-form-field: var(--inkstone-paper);
+  --background-modifier-cover: rgb(0 0 0 / 20%);
+  --background-modifier-box-shadow: transparent;
+  --background-modifier-message: var(--inkstone-ink);
+  --background-modifier-error-rgb: 68, 68, 68;
+  --background-modifier-error: #444444;
+  --background-modifier-error-hover: #222222;
+  --background-modifier-success-rgb: 68, 68, 68;
+  --background-modifier-success: #444444;
+
+  --text-normal: var(--inkstone-ink);
+  --text-muted: var(--inkstone-muted);
+  --text-faint: var(--inkstone-faint);
+  --text-on-accent: #ffffff;
+  --text-on-accent-inverted: var(--inkstone-ink);
+  --text-accent: var(--inkstone-ink);
+  --text-accent-hover: #000000;
+  --text-error: #222222;
+  --text-warning: #333333;
+  --text-success: #333333;
+  --text-selection: var(--inkstone-selection);
+  --text-highlight-bg-rgb: 230, 230, 230;
+  --text-highlight-bg: var(--inkstone-mark);
+  --bold-color: var(--inkstone-ink);
+  --bold-weight: 600;
+  --italic-color: var(--inkstone-ink);
+
+  --interactive-normal: #ffffff;
+  --interactive-hover: #eeeeee;
+  --interactive-accent: var(--inkstone-ink);
+  --interactive-accent-hover: #444444;
+  --interactive-success: #444444;
+  --icon-color: var(--inkstone-muted);
+  --icon-color-hover: var(--inkstone-ink);
+  --icon-color-active: var(--inkstone-ink);
+  --icon-color-focused: var(--inkstone-ink);
+  --icon-opacity: 1;
+  --icon-opacity-hover: 1;
+  --icon-opacity-active: 1;
+  --caret-color: var(--inkstone-ink);
+
+  /* Underlining survives monochrome displays and grayscale printing. */
+  --link-color: var(--inkstone-ink);
+  --link-color-hover: #000000;
+  --link-external-color: var(--inkstone-ink);
+  --link-external-color-hover: #000000;
+  --link-decoration: underline;
+  --link-decoration-hover: underline;
+  --link-external-decoration: underline;
+  --link-external-decoration-hover: underline;
+  --link-unresolved-color: var(--inkstone-muted);
+  --link-unresolved-opacity: 1;
+  --link-unresolved-decoration-style: dashed;
+  --link-unresolved-decoration-color: var(--inkstone-rule-strong);
+  --link-unresolved-filter: none;
+
+  /* Book-like title and body, with compact sans-serif section wayfinding. */
+  --h1-font: var(--font-text);
+  --h2-font: var(--font-interface);
+  --h3-font: var(--font-interface);
+  --h4-font: var(--font-interface);
+  --h5-font: var(--font-interface);
+  --h6-font: var(--font-interface);
+  --h1-size: 1.78em;
+  --h2-size: 1.33em;
+  --h3-size: 1.11em;
+  --h4-size: 1em;
+  --h5-size: 0.95em;
+  --h6-size: 0.9em;
+  --h1-weight: 700;
+  --h2-weight: 600;
+  --h3-weight: 600;
+  --h4-weight: 600;
+  --h5-weight: 600;
+  --h6-weight: 600;
+  --h1-color: var(--inkstone-ink);
+  --h2-color: var(--inkstone-ink);
+  --h3-color: var(--inkstone-ink);
+  --h4-color: var(--inkstone-ink);
+  --h5-color: var(--inkstone-muted);
+  --h6-color: var(--inkstone-muted);
+  --heading-spacing: var(--inkstone-space-8);
+  --inline-title-size: 1.78em;
+  --inline-title-weight: 700;
+  --inline-title-line-height: 1.4;
+
+  --list-spacing: 0.2em;
+  --list-indent: 1.65em;
+  --list-marker-color: var(--inkstone-muted);
+  --list-marker-color-hover: var(--inkstone-ink);
+  --list-marker-color-collapsed: var(--inkstone-ink);
+  --indentation-guide-color: var(--inkstone-rule);
+  --indentation-guide-color-active: var(--inkstone-rule-strong);
+  --checklist-done-color: var(--inkstone-muted);
+  --checklist-done-decoration: line-through;
+  --checkbox-color: var(--inkstone-ink);
+  --checkbox-color-hover: #444444;
+  --checkbox-border-color: var(--inkstone-rule-strong);
+  --checkbox-border-color-hover: var(--inkstone-ink);
+  --checkbox-marker-color: #ffffff;
+  --checkbox-radius: var(--inkstone-radius-xs);
+  --blockquote-border-thickness: 2px;
+  --blockquote-border-color: var(--inkstone-rule-strong);
+  --blockquote-background-color: transparent;
+  --blockquote-color: var(--inkstone-muted);
+  --hr-color: var(--inkstone-rule);
+  --hr-thickness: 1px;
+
+  --code-background: var(--inkstone-paper-alt);
+  --code-normal: var(--inkstone-ink);
+  --code-comment: var(--inkstone-faint);
+  --code-function: #333333;
+  --code-important: #222222;
+  --code-keyword: #222222;
+  --code-operator: #444444;
+  --code-property: #444444;
+  --code-punctuation: #555555;
+  --code-string: #444444;
+  --code-tag: #333333;
+  --code-value: #444444;
+  --code-size: 0.88em;
+  --table-border-color: var(--inkstone-rule);
+  --table-border-width: 1px;
+  --table-header-background: #f0f0f0;
+  --table-header-background-hover: #f0f0f0;
+  --table-header-color: var(--inkstone-ink);
+  --table-header-weight: 600;
+  --table-row-background-hover: transparent;
+  --table-row-alt-background: transparent;
+  --table-selection: #dddddd;
+  --table-selection-border-color: var(--inkstone-ink);
+  --table-cell-vertical-alignment: top;
+
+  --tag-color: var(--inkstone-muted);
+  --tag-color-hover: var(--inkstone-ink);
+  --tag-background: #f4f4f4;
+  --tag-background-hover: #eeeeee;
+  --tag-border-color: var(--inkstone-rule);
+  --tag-border-color-hover: var(--inkstone-rule-strong);
+  --tag-border-width: 1px;
+  --tag-radius: var(--inkstone-radius-sm);
+  --tag-size: 0.82em;
+  --metadata-label-text-color: var(--inkstone-muted);
+  --metadata-input-text-color: var(--inkstone-ink);
+  --metadata-border-color: var(--inkstone-rule);
+
+  /* Quiet chrome, with persistent active and focused states. */
+  --nav-item-color: var(--inkstone-muted);
+  --nav-item-color-hover: var(--inkstone-ink);
+  --nav-item-color-active: var(--inkstone-ink);
+  --nav-item-background-hover: transparent;
+  --nav-item-background-active: #e8e8e8;
+  --nav-item-background-selected: #e8e8e8;
+  --nav-item-size: 14px;
+  --nav-item-weight: 500;
+  --nav-item-weight-active: 600;
+  --nav-item-padding: var(--inkstone-space-2) var(--inkstone-space-3);
+  --nav-item-radius: var(--inkstone-radius-sm);
+  --tab-font-size: 14px;
+  --tab-background-active: var(--inkstone-paper);
+  --tab-text-color: var(--inkstone-muted);
+  --tab-text-color-active: var(--inkstone-ink);
+  --tab-text-color-focused: var(--inkstone-ink);
+  --tab-text-color-focused-active: var(--inkstone-ink);
+  --tab-text-color-focused-highlighted: var(--inkstone-ink);
+  --tab-text-color-focused-active-current: var(--inkstone-ink);
+  --tab-outline-color: var(--inkstone-rule);
+  --tab-curve: 0;
+  --tab-radius: 0;
+  --tab-radius-active: 0;
+  --tab-divider-color: var(--inkstone-rule);
+  --titlebar-background: var(--inkstone-paper-alt);
+  --titlebar-background-focused: var(--inkstone-paper-alt);
+  --titlebar-text-color: var(--inkstone-muted);
+  --titlebar-text-color-focused: var(--inkstone-ink);
+  --ribbon-background: var(--inkstone-paper-alt);
+  --ribbon-background-collapsed: var(--inkstone-paper-alt);
+  --divider-color: var(--inkstone-rule);
+  --divider-color-hover: var(--inkstone-rule-strong);
+  --search-result-background: var(--inkstone-paper);
+  --search-match-color: var(--inkstone-ink);
+  --search-match-background: #dddddd;
+  --scrollbar-bg: #eeeeee;
+  --scrollbar-thumb-bg: #aaaaaa;
+  --scrollbar-active-thumb-bg: #777777;
+  --slider-track-background: #cccccc;
+  --slider-thumb-border-color: var(--inkstone-rule-strong);
+  --toggle-thumb-color: #ffffff;
+  --toggle-border-width: 1px;
+  --modal-background: var(--inkstone-paper);
+  --modal-border-color: var(--inkstone-rule-strong);
+  --modal-border-width: 1px;
+  --modal-radius: var(--inkstone-radius-md);
+  --prompt-background: var(--inkstone-paper);
+  --prompt-border-color: var(--inkstone-rule-strong);
+  --prompt-border-width: 1px;
+  --prompt-radius: var(--inkstone-radius-md);
+  --prompt-backdrop-filter: none;
+  --menu-background: var(--inkstone-paper);
+  --menu-backdrop-filter: none;
+  --suggestion-background: var(--inkstone-paper);
+  --suggestion-backdrop-filter: none;
+  --blur-s: none;
+  --blur-m: none;
+  --blur-l: none;
+  --blur-opacity-s: 100%;
+  --blur-opacity-m: 100%;
+  --blur-background: var(--inkstone-paper);
+  --input-radius: var(--inkstone-radius-sm);
+  --button-radius: var(--inkstone-radius-sm);
+  --radius-s: var(--inkstone-radius-xs);
+  --radius-m: var(--inkstone-radius-sm);
+  --radius-l: var(--inkstone-radius-md);
+  --shadow-s: none;
+  --shadow-l: none;
+  --shadow-t: none;
+  --input-shadow: none;
+  --input-shadow-hover: none;
+  --embed-border-start: 2px solid var(--inkstone-rule);
+}
+
+/* Keep refreshes small; Obsidian's insertion event is a functional animation. */
+body.theme-light,
+body.theme-light *:not(.node-insert-event),
+body.theme-light *::before,
+body.theme-light *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+/* Scope typography to notes so controls and navigation retain native sizing. */
+.theme-light :is(.markdown-preview-view, .markdown-source-view.mod-cm6) {
+  /* Obsidian writes its 16px default onto body; scope the theme size to notes. */
+  --font-text-size: var(--inkstone-font-size);
+  text-rendering: optimizeLegibility;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  line-break: strict;
+}
+
+.theme-light .markdown-preview-view :is(p, li, blockquote),
+.theme-light .markdown-source-view.mod-cm6 .cm-line {
+  letter-spacing: normal;
+}
+
+.theme-light :is(h1, h2, h3, h4, h5, h6, .HyperMD-header) {
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.theme-light :is(.inline-title, .cm-header) {
+  letter-spacing: 0;
+}
+
+.theme-light .markdown-rendered h1 {
+  margin-block-end: var(--inkstone-space-6);
+}
+
+.theme-light .markdown-rendered h2 {
+  margin-block-start: var(--inkstone-space-8);
+  margin-block-end: var(--inkstone-space-3);
+}
+
+.theme-light .markdown-rendered :is(h3, h4, h5, h6) {
+  margin-block-start: var(--inkstone-space-6);
+  margin-block-end: var(--inkstone-space-2);
+}
+
+.theme-light :is(.markdown-rendered a, .cm-hmd-internal-link, .cm-link, .cm-url) {
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
+.theme-light :is(.markdown-rendered mark, .cm-highlight) {
+  color: var(--inkstone-ink);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  border-bottom: 1px solid var(--inkstone-rule-strong);
+}
+
+.theme-light .markdown-rendered blockquote {
+  padding-inline-start: var(--inkstone-space-4);
+  margin-inline: 0;
+}
+
+.theme-light .markdown-rendered :is(pre, code, kbd) {
+  letter-spacing: 0;
+}
+
+.theme-light .markdown-rendered pre {
+  border: 1px solid var(--inkstone-rule);
+  border-radius: var(--inkstone-radius-sm);
+  padding: var(--inkstone-space-4) var(--inkstone-space-6);
+}
+
+.theme-light .markdown-rendered :not(pre) > code {
+  border-radius: var(--inkstone-radius-xs);
+}
+
+.theme-light .markdown-rendered pre code {
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.theme-light :is(.cm-s-obsidian .cm-keyword, .token.keyword, .token.important) {
+  font-weight: 600;
+}
+
+.theme-light :is(.cm-s-obsidian .cm-comment, .token.comment) {
+  font-style: italic;
+}
+
+/* Native reading/live-preview wrappers keep wide tables locally scrollable. */
+.theme-light .markdown-rendered table {
+  font-size: 0.92em;
+  line-height: 1.6;
+  overflow-wrap: normal;
+}
+
+.theme-light .markdown-rendered th {
+  font-family: var(--font-interface);
+  white-space: nowrap;
+}
+
+.theme-light .markdown-rendered :is(th, td) {
+  padding: var(--inkstone-space-2) var(--inkstone-space-3);
+}
+
+.theme-light .markdown-rendered .math-block {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.4em;
+}
+
+.theme-light .footnotes {
+  color: var(--inkstone-muted);
+  margin-top: 1.5em;
+  font-size: 0.88em;
+}
+
+/* Marginal notes stay open; warning/error surfaces retain extra emphasis. */
+.theme-light .callout {
+  --callout-color: 68, 68, 68;
+  --callout-border-opacity: 1;
+  --callout-border-width: 0;
+  --callout-radius: 0;
+  --callout-padding: var(--inkstone-space-3) var(--inkstone-space-4);
+  margin-block: var(--inkstone-space-6);
+  background-color: transparent;
+  border-inline-start: 2px solid var(--inkstone-rule-strong);
+  mix-blend-mode: normal;
+}
+
+.theme-light .callout:is([data-callout="warning"], [data-callout="caution"], [data-callout="attention"]) {
+  background-color: var(--inkstone-paper-alt);
+  border-inline-start: 3px dashed var(--inkstone-ink);
+}
+
+.theme-light .callout:is([data-callout="danger"], [data-callout="error"], [data-callout="failure"], [data-callout="fail"], [data-callout="missing"]) {
+  background-color: var(--inkstone-paper-alt);
+  border-inline-start: 4px double var(--inkstone-ink);
+}
+
+.theme-light .callout-title {
+  gap: var(--inkstone-space-2);
+  font-family: var(--font-interface);
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.theme-light .callout-content > :last-child {
+  margin-bottom: 0;
+}
+
+.theme-light .workspace-tab-header.is-active {
+  box-shadow: inset 0 -2px var(--inkstone-ink);
+}
+
+.theme-light .workspace-tab-header.is-active .workspace-tab-header-inner-title {
+  font-weight: 600;
+}
+
+.theme-light .nav-file-title.is-active {
+  box-shadow: inset 2px 0 var(--inkstone-ink);
+}
+
+.theme-light :is(.menu, .suggestion-container, .prompt) {
+  background-color: var(--inkstone-paper);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.theme-light :is(button, input, textarea, select, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--inkstone-ink);
+  outline-offset: 2px;
+}
+
+.theme-light :is(input, textarea):is(:invalid, .is-invalid),
+.theme-light .setting-item.mod-warning {
+  border: 2px solid var(--inkstone-ink);
+}
+
+.theme-light .markdown-rendered img {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 600px) {
+  body.theme-light {
+    --file-margins: var(--inkstone-space-6) 20px 48px;
+    --h1-size: 1.5em;
+    --h2-size: 1.25em;
+    --inline-title-size: 1.6em;
+  }
+
+  .theme-light .markdown-rendered pre {
+    padding-inline: var(--inkstone-space-4);
+  }
+}
+
+@media print {
+  body.theme-light {
+    --background-primary: #ffffff;
+    --background-secondary: #ffffff;
+    --file-line-width: 100%;
+    --inkstone-font-size: 12pt;
+  }
+
+  .theme-light .callout,
+  .theme-light .markdown-rendered pre {
+    break-inside: avoid;
+  }
+}
+
+/* INKSTONE_ANNOTATIONS_START */
+/* Persisted annotations also render when the companion plugin is disabled. */
+body {
+  --inkstone-annotation-yellow: #f5e5a3;
+  --inkstone-annotation-green: #d8e7c7;
+  --inkstone-annotation-blue: #d5e4ef;
+  --inkstone-annotation-rose: #ead5dc;
+}
+
+.inkstone-highlight,
+.markdown-rendered mark.inkstone-highlight {
+  color: #202020;
+  padding: 0.05em 0.08em;
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.inkstone-highlight.inkstone-yellow,
+.markdown-rendered mark.inkstone-highlight.inkstone-yellow,
+.inkstone-swatch-yellow {
+  background-color: var(--inkstone-annotation-yellow);
+  border-bottom: 1px solid #666666;
+}
+
+.inkstone-highlight.inkstone-green,
+.markdown-rendered mark.inkstone-highlight.inkstone-green,
+.inkstone-swatch-green {
+  background-color: var(--inkstone-annotation-green);
+  border-bottom: 3px double #666666;
+}
+
+.inkstone-highlight.inkstone-blue,
+.markdown-rendered mark.inkstone-highlight.inkstone-blue,
+.inkstone-swatch-blue {
+  background-color: var(--inkstone-annotation-blue);
+  border-bottom: 2px dotted #666666;
+}
+
+.inkstone-highlight.inkstone-rose,
+.markdown-rendered mark.inkstone-highlight.inkstone-rose,
+.inkstone-swatch-rose {
+  background-color: var(--inkstone-annotation-rose);
+  border-bottom: 2px dashed #666666;
+}
+
+.inkstone-underline {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+body.inkstone-annotations-monochrome {
+  --inkstone-annotation-yellow: #e6e6e6;
+  --inkstone-annotation-green: #e6e6e6;
+  --inkstone-annotation-blue: #e6e6e6;
+  --inkstone-annotation-rose: #e6e6e6;
+}
+
+@media print {
+  .inkstone-highlight { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
+
+/* INKSTONE_ANNOTATIONS_END */
