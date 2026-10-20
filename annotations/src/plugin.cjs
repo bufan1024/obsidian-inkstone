@@ -1,6 +1,6 @@
 'use strict';
 
-const { Plugin, Modal, Setting, Notice, Menu, MarkdownView, PluginSettingTab } = require('obsidian');
+const { Plugin, Modal, Setting, Notice, Menu, MarkdownView, PluginSettingTab, setIcon } = require('obsidian');
 const { buildAnnotationPlan, buildEditAnnotationPlan, buildRemoveAnnotationPlan, parseAnnotations, projectReadingParagraph, validateSelection, applyChanges } = annotationCore;
 const PALETTE = [['yellow', '黄色'], ['green', '绿色'], ['blue', '蓝色'], ['rose', '粉色']];
 const READING_PROPERTIES = ['--inkstone-line-height', '--inkstone-line-width'];
@@ -15,6 +15,7 @@ class AnnotationModal extends Modal {
     this.color = capture.annotation ? capture.annotation.color : plugin.settings.lastColor;
     this.note = capture.annotation?.note || '';
     this.busy = false;
+    this.focusFrame = null;
   }
   onOpen() {
     this.plugin.modals.add(this);
@@ -54,7 +55,12 @@ class AnnotationModal extends Modal {
     this.saveButton.addEventListener('click', () => this.submit());
     this.contentEl.createEl('p', { cls: 'inkstone-dialog-hint', text: '可在命令面板中使用「墨读：撤销上次标注」。编辑视图也可使用系统撤销。' });
     this.scope.register(['Mod'], 'Enter', event => { event.preventDefault(); void this.submit(); return false; });
-    if (this.focusNote) this.noteInput.focus();
+    if (this.focusNote) {
+      this.focusFrame = this.contentEl.ownerDocument.defaultView.requestAnimationFrame(() => {
+        this.focusFrame = null;
+        if (this.plugin.modals.has(this) && this.noteInput.isConnected) this.noteInput.focus();
+      });
+    }
   }
   refreshChoices() {
     for (const choice of this.choiceButtons) {
@@ -73,7 +79,10 @@ class AnnotationModal extends Modal {
     finally { this.busy = false; this.saveButton.disabled = false; }
   }
   submit() { return this.perform(() => this.plugin.commit(this.capture, { kind: this.kind, color: this.color, note: this.note })); }
-  onClose() { this.plugin.modals.delete(this); this.contentEl.empty(); }
+  onClose() {
+    if (this.focusFrame !== null) this.contentEl.ownerDocument.defaultView.cancelAnimationFrame(this.focusFrame);
+    this.plugin.modals.delete(this); this.contentEl.empty();
+  }
 }
 
 class AnnotationSettings extends PluginSettingTab {
@@ -117,7 +126,7 @@ module.exports = class InkstoneAnnotations extends Plugin {
     this.active = true;
     this.modals = new Set(); this.documents = new Set(); this.sections = new WeakMap();
     this.readingTargets = new WeakMap(); this.recordCache = new Map();
-    this.toolbars = new Map(); this.toolbarTimers = new Map(); this.readingOriginals = new Map();
+    this.toolbars = new Map(); this.toolbarStates = new WeakMap(); this.toolbarTimers = new Map(); this.readingOriginals = new Map();
     this.lastAction = null; this.lastMarkdownView = null;
     this.registerView(annotationViews.VIEW_TYPE, leaf => new (annotationViews.createSidebarClass(this))(leaf));
     this.registerEditorExtension(annotationEditor.createEditorExtension(this));
@@ -285,13 +294,13 @@ module.exports = class InkstoneAnnotations extends Plugin {
         catch (error) { new Notice(error.message); }
         return;
       }
-      if (event.key === 'Escape') this.hideToolbars();
+      if (event.key === 'Escape') this.dismissToolbar(doc);
       else this.scheduleToolbar(doc);
     });
     for (const name of ['selectionchange', 'pointerup', 'keyup', 'touchend']) this.registerDomEvent(doc, name, () => this.scheduleToolbar(doc));
-    this.registerDomEvent(doc, 'scroll', () => this.hideToolbars(), true);
+    this.registerDomEvent(doc, 'scroll', () => this.dismissToolbar(doc), true);
     this.registerDomEvent(doc, 'pointerdown', event => {
-      if (!event.target.closest?.('.inkstone-selection-toolbar')) this.hideToolbars();
+      if (!event.target.closest?.('.inkstone-selection-toolbar')) { this.toolbarStates.delete(doc); this.hideToolbars(); }
     });
   }
   restoreReadingProperties(doc) {
@@ -313,45 +322,110 @@ module.exports = class InkstoneAnnotations extends Plugin {
     await this.saveData(this.settings);
   }
   scheduleToolbar(doc) {
-    if (!this.active || !this.settings.toolbar || this.modals.size) return;
+    if (!this.active || !this.settings.toolbar || this.modals.size || doc.activeElement?.closest?.('.inkstone-selection-toolbar')) return;
     const previous = this.toolbarTimers.get(doc);
     if (previous) doc.defaultView.clearTimeout(previous);
     this.toolbarTimers.set(doc, doc.defaultView.setTimeout(() => { this.toolbarTimers.delete(doc); this.showToolbar(doc); }, 120));
   }
   hideToolbars() { for (const toolbar of this.toolbars.values()) toolbar.remove(); this.toolbars.clear(); }
+  dismissToolbar(doc) {
+    const state = this.toolbarStates.get(doc);
+    if (state) state.dismissed = true;
+    this.hideToolbars();
+  }
+  positionToolbar(toolbar, capture, rect) {
+    const viewport = toolbar.ownerDocument.defaultView;
+    const viewRect = capture.view.contentEl.getBoundingClientRect();
+    const bounds = toolbar.getBoundingClientRect();
+    const center = rect?.width ? rect.left + rect.width / 2 : viewRect.left + viewRect.width / 2;
+    const above = rect?.height ? rect.top - bounds.height - 10 : viewRect.top + 8;
+    const below = rect?.height ? rect.bottom + 10 : above;
+    const y = above >= 8 ? above : below;
+    toolbar.style.left = `${Math.max(8, Math.min(center - bounds.width / 2, viewport.innerWidth - bounds.width - 8))}px`;
+    toolbar.style.top = `${Math.max(8, Math.min(y, viewport.innerHeight - bounds.height - 8))}px`;
+  }
+  async copySelection(capture, text, doc) {
+    this.assertCurrent(capture);
+    await doc.defaultView.navigator.clipboard.writeText(text);
+    new Notice('已复制选中文字。');
+  }
   showToolbar(doc) {
-    if (!this.active || !this.settings.toolbar || this.modals.size || doc.querySelector('.modal-container')) return;
+    if (!this.active || !this.settings.toolbar || this.modals.size || doc.querySelector('.modal-container, .menu') || doc.activeElement?.closest?.('.inkstone-selection-toolbar')) return;
     let capture;
     try {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
       if (!view || view.containerEl.ownerDocument !== doc) return this.hideToolbars();
-      if (view.getMode() !== 'preview' && !view.editor.somethingSelected()) return this.hideToolbars();
+      if (view.getMode() !== 'preview' && !view.editor.somethingSelected()) { this.toolbarStates.delete(doc); return this.hideToolbars(); }
       capture = this.capture();
-    } catch { return this.hideToolbars(); }
+    } catch { this.toolbarStates.delete(doc); return this.hideToolbars(); }
+    const previous = this.toolbarStates.get(doc);
+    if (previous && previous.capture.view === capture.view && previous.capture.filePath === capture.filePath && previous.capture.reading === capture.reading && previous.capture.snapshot === capture.snapshot && previous.capture.from === capture.from && previous.capture.to === capture.to && (previous.dismissed || this.toolbars.get(doc)?.isConnected)) return;
+    this.toolbarStates.set(doc, { capture, dismissed: false });
     this.hideToolbars();
+    const selection = doc.getSelection();
+    const rect = selection?.rangeCount ? selection.getRangeAt(0).getBoundingClientRect() : null;
+    const copiedText = capture.reading ? selection.toString() : capture.snapshot.slice(capture.from, capture.to);
     const toolbar = doc.createElement('div'); toolbar.className = 'inkstone-selection-toolbar';
     toolbar.setAttribute('role', 'toolbar'); toolbar.setAttribute('aria-label', '墨读快捷标注');
     toolbar.addEventListener('pointerdown', event => event.preventDefault());
     toolbar.addEventListener('mousedown', event => event.preventDefault());
-    const add = (label, text, work, className = '') => {
-      const button = doc.createElement('button'); button.type = 'button'; button.textContent = text;
-      button.setAttribute('aria-label', label); button.title = label; button.className = className;
-      button.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); this.hideToolbars(); work(); });
-      toolbar.appendChild(button);
+    const row = doc.createElement('div'); row.className = 'inkstone-toolbar-actions'; toolbar.appendChild(row);
+    const styles = doc.createElement('div'); styles.className = 'inkstone-toolbar-styles'; styles.hidden = true;
+    styles.id = 'inkstone-toolbar-styles'; styles.setAttribute('role', 'group'); styles.setAttribute('aria-label', '划线样式');
+    toolbar.appendChild(styles);
+    const run = work => {
+      this.dismissToolbar(doc);
+      Promise.resolve().then(() => { this.assertCurrent(capture); return work(); }).catch(error => new Notice(error.message || '操作未完成，请重新选择文字。'));
     };
-    for (const [color, label] of PALETTE) add(label, '', () => this.commit(capture, { kind: 'highlight', color }).catch(error => new Notice(error.message)), `inkstone-toolbar-color inkstone-swatch-${color}`);
-    add('下划线', 'Aa', () => this.quickUnderline(capture), 'inkstone-toolbar-underline');
-    add('备注', '备注', () => this.openAnnotation(capture, 'note'));
-    add('打开标注侧栏', '清单', () => this.showAnnotations());
+    const add = (parent, label, icon, text, work, keepOpen = false) => {
+      const button = doc.createElement('button'); button.type = 'button'; button.className = 'inkstone-toolbar-action';
+      button.setAttribute('aria-label', label); button.title = label;
+      if (icon) {
+        const glyph = doc.createElement('span'); glyph.className = 'inkstone-toolbar-icon'; glyph.setAttribute('aria-hidden', 'true');
+        setIcon(glyph, icon); button.appendChild(glyph);
+      }
+      if (text) { const caption = doc.createElement('span'); caption.textContent = text; button.appendChild(caption); }
+      button.addEventListener('click', event => {
+        event.preventDefault(); event.stopPropagation();
+        const anchor = button.getBoundingClientRect();
+        if (keepOpen) work(event, anchor); else run(() => work(event, anchor));
+      });
+      parent.appendChild(button); return button;
+    };
+    add(row, '复制', 'copy', '复制', () => this.copySelection(capture, copiedText, doc));
+    const stroke = doc.createElement('div'); stroke.className = 'inkstone-toolbar-stroke'; row.appendChild(stroke);
+    const kind = capture.annotation?.kind || this.settings.lastKind;
+    const color = capture.annotation ? capture.annotation.color : this.settings.lastColor;
+    add(stroke, '划线', kind === 'underline' ? 'underline' : 'highlighter', '划线', () => this.commit(capture, { kind, color }));
+    const toggle = add(stroke, '划线样式', 'chevron-down', '', event => {
+      styles.hidden = !styles.hidden;
+      toggle.setAttribute('aria-expanded', String(!styles.hidden));
+      this.positionToolbar(toolbar, capture, rect);
+      if (!styles.hidden && event.detail === 0) styles.querySelector('button')?.focus();
+    }, true);
+    toggle.classList.add('inkstone-toolbar-dropdown'); toggle.setAttribute('aria-expanded', 'false'); toggle.setAttribute('aria-controls', styles.id);
+    for (const [nextColor, label] of PALETTE) {
+      const button = add(styles, label, null, label.replace('色', ''), () => this.commit(capture, { kind: 'highlight', color: nextColor }));
+      button.classList.add('inkstone-toolbar-style');
+      button.setAttribute('aria-pressed', String(kind === 'highlight' && color === nextColor));
+      const dot = doc.createElement('span'); dot.className = `inkstone-toolbar-dot inkstone-swatch-${nextColor}`; dot.setAttribute('aria-hidden', 'true');
+      button.prepend(dot);
+    }
+    const underline = add(styles, '下划线', null, '下划线', () => this.commit(capture, { kind: 'underline' }));
+    underline.classList.add('inkstone-toolbar-style', 'inkstone-toolbar-underline'); underline.setAttribute('aria-pressed', String(kind === 'underline'));
+    add(row, '写想法', 'message-square', '写想法', () => this.openAnnotation(capture, 'note'));
+    const more = add(row, '更多', 'ellipsis', '', (_event, anchor) => {
+      const menu = new Menu();
+      menu.addItem(item => item.setTitle('打开标注侧栏').setIcon('list').onClick(() => this.showAnnotations()));
+      menu.addItem(item => item.setTitle('导出当前笔记摘录').setIcon('file-output').onClick(() => run(() => this.exportAnnotations())));
+      if (capture.annotation) menu.addItem(item => item.setTitle('移除标注').setIcon('eraser').onClick(() => {
+        this.removeAnnotation(capture.annotation.from, capture).catch(() => {});
+      }));
+      menu.showAtPosition({ x: anchor.left, y: anchor.bottom + 4 }, doc);
+    });
+    more.setAttribute('aria-haspopup', 'menu');
     doc.body.appendChild(toolbar); this.toolbars.set(doc, toolbar);
-    const selection = doc.getSelection();
-    const rect = selection?.rangeCount ? selection.getRangeAt(0).getBoundingClientRect() : null;
-    const viewRect = capture.view.contentEl.getBoundingClientRect();
-    const bounds = toolbar.getBoundingClientRect();
-    const x = rect?.width ? rect.left + rect.width / 2 - bounds.width / 2 : viewRect.left + (viewRect.width - bounds.width) / 2;
-    const y = rect?.height ? rect.top - bounds.height - 8 : viewRect.top + 8;
-    toolbar.style.left = `${Math.max(8, Math.min(x, doc.defaultView.innerWidth - bounds.width - 8))}px`;
-    toolbar.style.top = `${Math.max(8, Math.min(y, doc.defaultView.innerHeight - bounds.height - 8))}px`;
+    this.positionToolbar(toolbar, capture, rect);
   }
   captureEditor(editor, info) {
     const view = this.currentView();

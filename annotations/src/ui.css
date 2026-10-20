@@ -59,18 +59,40 @@
 .inkstone-annotation-card-text { margin: 8px 0; padding-inline-start: 10px; border-inline-start: 2px solid var(--background-modifier-border); }
 .inkstone-annotation-card-kind { display: inline-block; font-size: 12px; color: var(--text-muted); border-bottom: 1px solid currentColor; }
 .inkstone-selection-toolbar {
-  position: fixed; z-index: 90; display: flex; flex-wrap: wrap; align-items: center;
-  gap: 4px; padding: 6px; max-width: calc(100vw - 16px); border: 1px solid var(--background-modifier-border-focus);
-  border-radius: 4px; background: var(--background-primary); color: var(--text-normal); box-shadow: none;
+  position: fixed; z-index: 90; padding: 4px; max-width: calc(100vw - 16px);
+  border: 1px solid var(--background-modifier-border); border-radius: 10px;
+  background: var(--background-primary); color: var(--text-normal); box-shadow: none;
+  font: 13px/1 var(--font-interface); user-select: none;
 }
-.inkstone-selection-toolbar button { min-width: 40px; min-height: 44px; padding: 6px 8px; box-shadow: none; border: 1px solid var(--background-modifier-border); }
-.inkstone-selection-toolbar .inkstone-toolbar-color { width: 40px; border-radius: 2px; }
+.inkstone-toolbar-actions, .inkstone-toolbar-stroke { display: flex; align-items: center; }
+.inkstone-toolbar-stroke { border-inline: 1px solid var(--background-modifier-border); margin-inline: 2px; padding-inline: 2px; }
+.inkstone-selection-toolbar .inkstone-toolbar-action {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  height: 36px; min-height: 36px; min-width: 32px; margin: 0; padding: 0 8px;
+  border: 0; border-radius: 6px; background: transparent; color: inherit;
+  font: inherit; white-space: nowrap; box-shadow: none; cursor: pointer;
+}
+.inkstone-selection-toolbar .inkstone-toolbar-action:hover,
+.inkstone-selection-toolbar .inkstone-toolbar-action[aria-expanded="true"] { background: var(--background-modifier-hover); }
+.inkstone-selection-toolbar .inkstone-toolbar-action:focus-visible { outline: 2px solid var(--text-normal); outline-offset: -2px; }
+.inkstone-toolbar-icon { display: inline-flex; width: 16px; height: 16px; flex: 0 0 16px; }
+.inkstone-toolbar-icon svg { width: 16px; height: 16px; stroke-width: 1.75px; }
+.inkstone-selection-toolbar .inkstone-toolbar-dropdown { padding-inline: 4px; min-width: 24px; }
+.inkstone-toolbar-styles { display: grid; grid-template-columns: repeat(4, 1fr) 1.3fr; gap: 2px; padding-top: 5px; margin-top: 4px; border-top: 1px solid var(--background-modifier-border); }
+.inkstone-selection-toolbar [hidden] { display: none !important; }
+.inkstone-selection-toolbar .inkstone-toolbar-style { gap: 4px; padding-inline: 4px; border: 1px solid transparent; }
+.inkstone-selection-toolbar .inkstone-toolbar-style[aria-pressed="true"] { border-color: var(--text-normal); }
+/* Color belongs to an inner swatch, beyond Obsidian's native button background. */
+.inkstone-selection-toolbar .inkstone-toolbar-dot { display: inline-block; width: 18px; height: 18px; flex: 0 0 18px; border: 1px solid rgb(0 0 0 / 20%); border-radius: 50%; }
 .inkstone-toolbar-underline { text-decoration: underline; text-underline-offset: 3px; }
+@media (pointer: coarse) {
+  .inkstone-selection-toolbar .inkstone-toolbar-action { height: 44px; min-height: 44px; min-width: 44px; }
+  .inkstone-selection-toolbar .inkstone-toolbar-dropdown { min-width: 32px; }
+}
 .inkstone-reading-navigation { display: flex; gap: 4px; }
 .inkstone-reading-navigation button { min-height: 24px; min-width: 30px; padding: 0 6px; background: transparent; box-shadow: none; }
 @media (max-width: 600px) {
-  .inkstone-selection-toolbar { gap: 2px; padding: 4px; }
-  .inkstone-selection-toolbar button { min-width: 36px; padding-inline: 6px; }
+  .inkstone-selection-toolbar .inkstone-toolbar-action { padding-inline: 6px; }
   .inkstone-annotation-modal { max-height: calc(100dvh - 24px); overflow-y: auto; }
   .inkstone-reading-navigation button { min-height: 44px; min-width: 44px; }
 }

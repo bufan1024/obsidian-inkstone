@@ -17,7 +17,7 @@ function pluginFixture(text = '<u class="inkstone-underline">宿主原文</u>') 
     contentEl: { contains: () => true }, containerEl: { ownerDocument: doc } });
   view.leaf = { view }; view.editor = { getValue: () => text };
   plugin.app = { workspace: { activeLeaf: view.leaf, getActiveViewOfType: Type => view instanceof Type ? view : null, getLeavesOfType: () => [view.leaf] } };
-  Object.assign(plugin, { active: true, settings: {monochrome: false, toolbar: false}, sections: new WeakMap(), readingTargets: new WeakMap(), recordCache: new Map(), documents: new Set(), readingOriginals: new Map(), toolbars: new Map(), toolbarTimers: new Map(), modals: new Set() });
+  Object.assign(plugin, { active: true, settings: {monochrome: false, toolbar: false}, sections: new WeakMap(), readingTargets: new WeakMap(), recordCache: new Map(), documents: new Set(), readingOriginals: new Map(), toolbars: new Map(), toolbarStates: new WeakMap(), toolbarTimers: new Map(), modals: new Set() });
   plugin.registerDomEvent = (_doc, name, callback) => { events[name] = callback; };
   plugin.bindDocument(doc);
   const calls = []; plugin.editAnnotation = (...args) => calls.push(args);
@@ -130,4 +130,39 @@ test('the note shortcut preserves the style of an existing highlight', async () 
   assert.equal(updated.kind,'highlight');
   assert.equal(updated.color,'green');
   assert.equal(updated.note,'新增备注');
+});
+
+test('copy uses the captured visible text without modifying the note', async () => {
+  const fixture=pluginFixture(), copied=[];
+  const context=fixture.plugin.getAnnotationContext();
+  await fixture.plugin.copySelection(context,'宿主原文',{defaultView:{navigator:{clipboard:{writeText:async text=>copied.push(text)}}}});
+  assert.deepEqual(copied,['宿主原文']);
+  assert.equal(fixture.view.getViewData(),context.snapshot);
+});
+
+test('copy refuses a stale selection before invoking the clipboard API', async () => {
+  const fixture=pluginFixture(), copied=[];
+  const context=fixture.plugin.getAnnotationContext();fixture.setText('选区已变化');
+  await assert.rejects(()=>fixture.plugin.copySelection(context,'宿主原文',{defaultView:{navigator:{clipboard:{writeText:async text=>copied.push(text)}}}}),/变化/);
+  assert.deepEqual(copied,[]);
+});
+
+test('repeated events for the same selection retain the open toolbar node', () => {
+  const fixture=pluginFixture(), plugin=fixture.plugin, doc=fixture.view.containerEl.ownerDocument;
+  const capture={...plugin.getAnnotationContext(),from:0,to:2};
+  doc.querySelector=()=>null;plugin.settings.toolbar=true;plugin.capture=()=>({...capture});
+  const toolbar={isConnected:true,remove(){throw new Error('Open styles must not be discarded');}};
+  plugin.toolbarStates.set(doc,{capture,dismissed:false});plugin.toolbars.set(doc,toolbar);
+  plugin.showToolbar(doc);
+  assert.equal(plugin.toolbars.get(doc),toolbar);
+});
+
+test('dismissed selection stays closed until the user makes a new selection', () => {
+  const fixture=pluginFixture(), plugin=fixture.plugin, doc=fixture.view.containerEl.ownerDocument;
+  const capture={...plugin.getAnnotationContext(),from:0,to:2};
+  doc.querySelector=()=>null;plugin.settings.toolbar=true;plugin.capture=()=>({...capture});
+  plugin.toolbarStates.set(doc,{capture,dismissed:false});
+  plugin.dismissToolbar(doc);plugin.showToolbar(doc);
+  assert.equal(plugin.toolbars.size,0);
+  assert.equal(plugin.toolbarStates.get(doc).dismissed,true);
 });

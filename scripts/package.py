@@ -29,6 +29,7 @@ THEME_FILES = (
     "preview-workspace.png",
     "preview-live-preview.png",
     "preview-reading-settings.png",
+    "preview-toolbar.png",
     "examples/阅读与排版示例.md",
     "examples/划线与备注示例.md",
 )

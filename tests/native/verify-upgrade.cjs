@@ -117,6 +117,7 @@ const results = [];
       await fixture('选择文字后显示快捷工具条。\n');
       await page.evaluate(()=>app.workspace.getLeaf(false).view.editor.setSelection({line:0,ch:0},{line:0,ch:4}));
       await page.locator('.inkstone-selection-toolbar').waitFor({timeout:2500});
+      await page.locator('.inkstone-selection-toolbar').getByRole('button',{name:'划线样式',exact:true}).click();
       await page.locator('.inkstone-selection-toolbar').getByRole('button',{name:'绿色',exact:true}).click();
       await page.waitForFunction(()=>app.workspace.getLeaf(false).view.getViewData().includes('inkstone-green'));
     });
@@ -259,6 +260,7 @@ const results = [];
       await page.evaluate(()=>app.workspace.getLeaf(false).view.editor.setSelection({line:0,ch:0},{line:0,ch:4}));
       const toolbar=page.locator('.inkstone-selection-toolbar');await toolbar.waitFor();
       const bounds=await toolbar.boundingBox();assert(bounds.x>=0&&bounds.x+bounds.width<=391);
+      await toolbar.getByRole('button',{name:'划线样式',exact:true}).click();
       const green=toolbar.getByRole('button',{name:'绿色',exact:true});
       await green.dispatchEvent('pointerdown',{pointerType:'touch',isPrimary:true});await green.click();
       await page.waitForFunction(()=>app.plugins.plugins['inkstone-annotations'].settings.lastColor==='green');
@@ -269,6 +271,124 @@ const results = [];
       assert.equal(await page.getByRole('button',{name:'绿色',exact:true}).getAttribute('aria-pressed'),'true');
       await page.getByRole('button',{name:'取消',exact:true}).click();
       await page.setViewportSize({width:1440,height:1000});
+    });
+
+    const selectEditorText=async text=>{
+      await page.evaluate(text=>{
+        const view=app.workspace.getLeaf(false).view,snapshot=view.getViewData(),from=snapshot.indexOf(text);
+        if(from<0)throw Error('Fixture selection not found');
+        view.editor.setSelection(view.editor.offsetToPos(from),view.editor.offsetToPos(from+text.length));
+      },text);
+      await page.locator('.inkstone-selection-toolbar').waitFor();
+    };
+    await run('toolbar-primary-and-visible-styles',async()=>{
+      await page.evaluate(()=>{const plugin=app.plugins.plugins['inkstone-annotations'];plugin.settings.lastKind='highlight';plugin.settings.lastColor='green';});
+      await fixture('选中文字后，留下值得回味的句子。\n');
+      await selectEditorText('留下值得回味的句子');
+      const toolbar=page.locator('.inkstone-selection-toolbar');
+      assert.deepEqual(await toolbar.locator('.inkstone-toolbar-actions button').evaluateAll(buttons=>buttons.map(button=>button.getAttribute('aria-label'))),['复制','划线','划线样式','写想法','更多']);
+      const primary=await toolbar.evaluate(node=>({height:node.getBoundingClientRect().height,font:getComputedStyle(node).fontSize,rows:[...node.querySelectorAll('.inkstone-toolbar-actions button')].map(button=>button.getBoundingClientRect().top)}));
+      assert(primary.height<=48,`Desktop toolbar height: ${primary.height}`);assert.equal(primary.font,'13px');assert.equal(new Set(primary.rows).size,1);
+      assert.equal(await toolbar.locator('.inkstone-toolbar-dot:visible').count(),0);
+      await toolbar.getByRole('button',{name:'划线样式',exact:true}).click();
+      await page.waitForTimeout(350);
+      assert.equal(await toolbar.getByRole('button',{name:'划线样式',exact:true}).getAttribute('aria-expanded'),'true');
+      const colors=await toolbar.locator('.inkstone-toolbar-dot').evaluateAll(dots=>dots.map(dot=>getComputedStyle(dot).backgroundColor));
+      assert.equal(colors.length,4);assert.equal(new Set(colors).size,4);assert(colors.every(color=>!['rgb(255, 255, 255)','rgba(0, 0, 0, 0)'].includes(color)),JSON.stringify(colors));
+      assert.equal(await toolbar.getByRole('button',{name:'绿色',exact:true}).getAttribute('aria-pressed'),'true');
+      await toolbar.getByRole('button',{name:'蓝色',exact:true}).click();
+      await page.waitForFunction(()=>app.workspace.getLeaf(false).view.getViewData().includes('inkstone-blue">留下值得回味的句子</mark>'));
+      await fixture('下一处选择，沿用最近的样式。\n');await selectEditorText('沿用最近的样式');
+      await toolbar.getByRole('button',{name:'划线样式',exact:true}).click();
+      assert.equal(await toolbar.getByRole('button',{name:'蓝色',exact:true}).getAttribute('aria-pressed'),'true');
+      await toolbar.getByRole('button',{name:'划线',exact:true}).click();
+      await page.waitForFunction(()=>app.workspace.getLeaf(false).view.getViewData().includes('inkstone-blue">沿用最近的样式</mark>'));
+    });
+    await run('toolbar-note-preserves-style',async()=>{
+      await fixture('<mark class="inkstone-highlight inkstone-green">保留绿色观点</mark>\n');await selectEditorText('保留绿色观点');
+      await page.locator('.inkstone-selection-toolbar').getByRole('button',{name:'写想法',exact:true}).click();
+      const note=page.locator('textarea[aria-label="备注内容"]');await note.waitFor();
+      assert.equal(await page.getByRole('button',{name:'绿色',exact:true}).getAttribute('aria-pressed'),'true');
+      await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='备注内容',{}, {timeout:1500});
+      await note.fill('只补充想法，保留原有绿色。');await page.getByRole('button',{name:'保存标注',exact:true}).click();
+      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-modal'));
+      const text=await data();assert(text.includes('<mark class="inkstone-highlight inkstone-green">保留绿色观点</mark>'));assert(text.includes('只补充想法，保留原有绿色。'));assert(!text.includes('inkstone-underline'));
+    });
+    await run('toolbar-copy-with-isolated-clipboard',async()=>{
+      const original='只复制当前选择，正文保持原样。\n';await fixture(original);await selectEditorText('当前选择');
+      await page.evaluate(()=>{window.__inkstoneQaOriginalWrite=navigator.clipboard.writeText;window.__inkstoneQaWrites=[];navigator.clipboard.writeText=async text=>{window.__inkstoneQaWrites.push(text)};});
+      try{
+        await page.locator('.inkstone-selection-toolbar').getByRole('button',{name:'复制',exact:true}).click();
+        await page.waitForFunction(()=>window.__inkstoneQaWrites.length===1);
+        assert.deepEqual(await page.evaluate(()=>window.__inkstoneQaWrites),['当前选择']);assert.equal(await data(),original);
+        await page.waitForTimeout(350);assert.equal(await page.locator('.inkstone-selection-toolbar').count(),0);
+        await selectEditorText('正文保持原样');await page.keyboard.press('Escape');await page.waitForTimeout(350);assert.equal(await page.locator('.inkstone-selection-toolbar').count(),0);assert.equal(await data(),original);
+        await fixture('甲 &amp; 乙，复制阅读视图中的可见文字。\n','preview');
+        await page.evaluate(()=>{const node=app.workspace.getLeaf(false).view.contentEl.querySelector('.markdown-preview-view p').firstChild;const range=document.createRange();range.setStart(node,0);range.setEnd(node,5);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);});
+        await page.locator('.inkstone-selection-toolbar').getByRole('button',{name:'复制',exact:true}).click();await page.waitForFunction(()=>window.__inkstoneQaWrites.length===2);assert.deepEqual(await page.evaluate(()=>window.__inkstoneQaWrites),['当前选择','甲 & 乙']);
+      }finally{await page.evaluate(()=>{navigator.clipboard.writeText=window.__inkstoneQaOriginalWrite;delete window.__inkstoneQaOriginalWrite;delete window.__inkstoneQaWrites;});}
+    });
+    await run('toolbar-narrow-and-top-edge',async()=>{
+      await page.evaluate(()=>{app.workspace.leftSplit.collapse();app.workspace.rightSplit.collapse();});await page.setViewportSize({width:390,height:844});
+      try{
+        await fixture('顶边也应留出空间，避免工具条遮住选中的原文。\n','preview');
+        await page.locator('[data-inkstone-qa] .markdown-preview-view p').waitFor();
+        await page.evaluate(()=>{
+          const view=app.workspace.getLeaf(false).view,paragraph=view.contentEl.querySelector('.markdown-preview-view p'),node=paragraph.firstChild;
+          const range=document.createRange();range.setStart(node,0);range.setEnd(node,8);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
+          // Move the real rendered text to the viewport edge within this QA fixture.
+          const rendered=view.contentEl.querySelector('.markdown-preview-view');rendered.style.transform=`translateY(${10-range.getBoundingClientRect().top}px)`;
+          const plugin=app.plugins.plugins['inkstone-annotations'];plugin.hideToolbars();plugin.showToolbar(document);
+        });
+        const toolbar=page.locator('.inkstone-selection-toolbar');await toolbar.waitFor();
+        const read=()=>page.evaluate(()=>({toolbar:document.querySelector('.inkstone-selection-toolbar').getBoundingClientRect().toJSON(),selection:window.getSelection().getRangeAt(0).getBoundingClientRect().toJSON()}));
+        const first=await read();assert(first.selection.top>=0&&first.selection.top<20);assert(first.toolbar.top>=first.selection.bottom+5);assert(first.toolbar.left>=0&&first.toolbar.right<=390);
+        await toolbar.getByRole('button',{name:'划线样式',exact:true}).click();
+        const expanded=await read();assert(expanded.toolbar.left>=0&&expanded.toolbar.right<=390);assert(expanded.toolbar.top>=expanded.selection.bottom+5);
+        const layout=await toolbar.evaluate(node=>({width:node.clientWidth,scroll:node.scrollWidth}));assert(layout.scroll<=layout.width+1);
+      }finally{
+        await page.evaluate(()=>{app.workspace.getLeaf(false).view.contentEl.querySelector('.markdown-preview-view')?.style.removeProperty('transform');app.plugins.plugins['inkstone-annotations'].hideToolbars();});
+        await page.setViewportSize({width:1440,height:1000});
+      }
+    });
+    await run('toolbar-keyboard-focus-stays',async()=>{
+      await fixture('键盘也能选样式并标注。\n');await selectEditorText('选样式');
+      await page.evaluate(()=>{const toolbar=document.querySelector('.inkstone-selection-toolbar');window.__inkstoneQaToolbar=toolbar;toolbar.querySelector('[aria-label="划线样式"]').focus();document.dispatchEvent(new Event('selectionchange'));app.plugins.plugins['inkstone-annotations'].scheduleToolbar(document);});
+      // Exercise the 120 ms selection debounce while keyboard focus remains in the toolbar.
+      await page.waitForTimeout(180);
+      assert.equal(await page.evaluate(()=>document.querySelector('.inkstone-selection-toolbar')===window.__inkstoneQaToolbar&&document.activeElement?.getAttribute('aria-label')==='划线样式'),true);
+      await page.keyboard.press('Enter');
+      assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'黄色');
+      await page.keyboard.press('Tab');assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'绿色');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(()=>app.workspace.getLeaf(false).view.getViewData().includes('inkstone-green">选样式</mark>'));
+      await page.evaluate(()=>{delete window.__inkstoneQaToolbar;});
+    });
+    await run('toolbar-more-and-stale-selection',async()=>{
+      await fixture('<u class="inkstone-underline">已有划线</u>，其他正文。\n');await selectEditorText('已有划线');
+      await page.locator('.inkstone-selection-toolbar').getByRole('button',{name:'更多',exact:true}).click();
+      await page.locator('.menu-item').filter({has:page.locator('.menu-item-title',{hasText:'打开标注侧栏'})}).click();
+      await page.locator('.inkstone-annotation-sidebar').waitFor();assert((await page.locator('.inkstone-annotation-sidebar').textContent()).includes('已有划线'));
+      await page.evaluate(()=>{const leaf=app.workspace.getLeavesOfType('markdown').find(leaf=>leaf.view.file===app.workspace.getActiveFile())||app.workspace.getLeavesOfType('markdown')[0];app.workspace.setActiveLeaf(leaf,{focus:true});});
+      await selectEditorText('已有划线');await page.locator('.inkstone-selection-toolbar').getByRole('button',{name:'更多',exact:true}).click();
+      await page.locator('.menu-item').filter({has:page.locator('.menu-item-title',{hasText:'移除标注'})}).click();
+      await page.waitForFunction(()=>!app.workspace.getLeaf(false).view.getViewData().includes('inkstone-underline'));
+      assert.equal(await data(),'已有划线，其他正文。\n');
+      const original='快照变化后，旧工具条必须拒绝写入。\n';await fixture(original);await selectEditorText('旧工具条');
+      const updated=original+'外部修改。\n';
+      await page.evaluate(updated=>{const button=document.querySelector('.inkstone-selection-toolbar [aria-label="划线"]');app.workspace.getLeaf(false).view.editor.setValue(updated);button.click();},updated);
+      await page.waitForFunction(()=>document.querySelector('.notice')?.textContent.includes('笔记')||!document.querySelector('.inkstone-selection-toolbar'));
+      assert.equal(await data(),updated);
+      const same='相同内容也应可以重新标注。\n';
+      await fixture(same);await selectEditorText('重新标注');await page.keyboard.press('Escape');await page.waitForTimeout(350);assert.equal(await page.locator('.inkstone-selection-toolbar').count(),0);
+      await fixture(same);await selectEditorText('重新标注');assert.equal(await page.locator('.inkstone-selection-toolbar').count(),1);
+      await page.keyboard.press('Escape');
+      await page.evaluate(async()=>{const leaf=app.workspace.getLeaf(false),state=leaf.getViewState();await leaf.setViewState({...state,state:{...state.state,mode:'preview'}});});
+      await page.locator('[data-inkstone-qa] .markdown-preview-view p').waitFor();
+      await page.evaluate(()=>{const node=app.workspace.getLeaf(false).view.contentEl.querySelector('.markdown-preview-view p').firstChild,from=node.textContent.indexOf('重新标注'),range=document.createRange();range.setStart(node,from);range.setEnd(node,from+4);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);});
+      await page.locator('.inkstone-selection-toolbar').waitFor();await page.keyboard.press('Escape');
+      await page.evaluate(async()=>{const leaf=app.workspace.getLeaf(false),state=leaf.getViewState();await leaf.setViewState({...state,state:{...state.state,mode:'source',source:false}});});
+      await selectEditorText('重新标注');assert.equal(await page.locator('.inkstone-selection-toolbar').count(),1);assert.equal(await data(),same);
     });
     if(results.some(result=>!result.passed))process.exitCode=1;
     console.log(JSON.stringify({app:await page.title(),results},null,2));
