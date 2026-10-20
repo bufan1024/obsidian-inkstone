@@ -1,6 +1,6 @@
 'use strict';
 
-const { Plugin, Modal, Setting, Notice, Menu, MarkdownView, PluginSettingTab, setIcon } = require('obsidian');
+const { Plugin, Modal, Setting, Notice, Menu, MarkdownView, PluginSettingTab, Scope, setIcon } = require('obsidian');
 const { buildAnnotationPlan, buildEditAnnotationPlan, buildRemoveAnnotationPlan, parseAnnotations, projectReadingParagraph, validateSelection, applyChanges } = annotationCore;
 const PALETTE = [['yellow', '黄色'], ['green', '绿色'], ['blue', '蓝色'], ['rose', '粉色']];
 const READING_PROPERTIES = ['--inkstone-line-height', '--inkstone-line-width'];
@@ -125,7 +125,7 @@ module.exports = class InkstoneAnnotations extends Plugin {
     };
     this.active = true;
     this.modals = new Set(); this.documents = new Set(); this.sections = new WeakMap();
-    this.readingTargets = new WeakMap(); this.recordCache = new Map();
+    this.readingTargets = new WeakMap(); this.readingRefreshes = new WeakMap(); this.recordCache = new Map();
     this.toolbars = new Map(); this.toolbarStates = new WeakMap(); this.toolbarTimers = new Map(); this.readingOriginals = new Map();
     this.lastAction = null; this.lastMarkdownView = null;
     this.registerView(annotationViews.VIEW_TYPE, leaf => new (annotationViews.createSidebarClass(this))(leaf));
@@ -241,9 +241,28 @@ module.exports = class InkstoneAnnotations extends Plugin {
       }
     });
   }
+  refreshReadingTargets(view, snapshot) {
+    if (view.getMode() !== 'preview' || view.getViewData() !== snapshot) return;
+    const refreshed = new Set();
+    for (const node of view.contentEl.querySelectorAll('mark.inkstone-highlight, u.inkstone-underline')) {
+      let element = node;
+      while (element && element !== view.contentEl && !this.sections.has(element)) element = element.parentElement;
+      const section = this.sections.get(element);
+      if (!section || refreshed.has(element) || section.context.sourcePath !== view.file?.path) continue;
+      refreshed.add(element);
+      try {
+        if (section.context.getSectionInfo(element)?.text === snapshot) this.processReadingSection(element, section.context);
+      } catch { /* A detached section keeps its stale guard until the renderer replaces it. */ }
+    }
+  }
   readingAnnotationContext(node, view) {
-    const rendered = this.readingTargets.get(node);
+    let rendered = this.readingTargets.get(node);
     if (!rendered || rendered.filePath !== view.file?.path) throw new Error('嵌入笔记中的标注请先打开原笔记后编辑。');
+    const refresh = this.readingRefreshes.get(view);
+    if (refresh?.filePath === view.file?.path && rendered.snapshot === refresh.before && view.getViewData() === refresh.after) {
+      this.refreshReadingTargets(view, refresh.after);
+      rendered = this.readingTargets.get(node);
+    }
     if (rendered.snapshot !== view.getViewData() || node.textContent !== rendered.text) throw new Error('笔记正在更新，请重新点击标注。');
     const context = { view, filePath: rendered.filePath, snapshot: rendered.snapshot, records: this.recordsFor(rendered.snapshot, rendered.filePath) };
     this.assertCurrent(context);
@@ -283,14 +302,14 @@ module.exports = class InkstoneAnnotations extends Plugin {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
       if (mark && view?.getMode() === 'preview' && view.contentEl.contains(mark) && doc.getSelection()?.isCollapsed !== false) {
         event.preventDefault();
-        try { this.editAnnotation(Number(mark.dataset.inkstoneFrom), this.readingAnnotationContext(mark, view)); }
+        try { this.showAnnotationMenu(Number(mark.dataset.inkstoneFrom), this.readingAnnotationContext(mark, view), mark); }
         catch (error) { new Notice(error.message); }
       }
     });
     this.registerDomEvent(doc, 'keydown', event => {
       if ((event.key === 'Enter' || event.key === ' ') && event.target.matches?.('[data-inkstone-from]')) {
         event.preventDefault();
-        try { this.editAnnotation(Number(event.target.dataset.inkstoneFrom), this.readingAnnotationContext(event.target, this.currentView())); }
+        try { this.showAnnotationMenu(Number(event.target.dataset.inkstoneFrom), this.readingAnnotationContext(event.target, this.currentView()), event.target, true); }
         catch (error) { new Notice(error.message); }
         return;
       }
@@ -298,7 +317,9 @@ module.exports = class InkstoneAnnotations extends Plugin {
       else this.scheduleToolbar(doc);
     });
     for (const name of ['selectionchange', 'pointerup', 'keyup', 'touchend']) this.registerDomEvent(doc, name, () => this.scheduleToolbar(doc));
-    this.registerDomEvent(doc, 'scroll', () => this.dismissToolbar(doc), true);
+    this.registerDomEvent(doc, 'scroll', event => {
+      if (!this.toolbars.get(doc)?.contains(event.target)) this.dismissToolbar(doc);
+    }, true);
     this.registerDomEvent(doc, 'pointerdown', event => {
       if (!event.target.closest?.('.inkstone-selection-toolbar')) { this.toolbarStates.delete(doc); this.hideToolbars(); }
     });
@@ -327,7 +348,10 @@ module.exports = class InkstoneAnnotations extends Plugin {
     if (previous) doc.defaultView.clearTimeout(previous);
     this.toolbarTimers.set(doc, doc.defaultView.setTimeout(() => { this.toolbarTimers.delete(doc); this.showToolbar(doc); }, 120));
   }
-  hideToolbars() { for (const toolbar of this.toolbars.values()) toolbar.remove(); this.toolbars.clear(); }
+  hideToolbars() {
+    for (const toolbar of this.toolbars.values()) { toolbar.inkstoneDispose?.(); toolbar.remove(); }
+    this.toolbars.clear();
+  }
   dismissToolbar(doc) {
     const state = this.toolbarStates.get(doc);
     if (state) state.dismissed = true;
@@ -350,6 +374,7 @@ module.exports = class InkstoneAnnotations extends Plugin {
     new Notice('已复制选中文字。');
   }
   showToolbar(doc) {
+    if (this.toolbars.get(doc)?.classList?.contains('inkstone-annotation-menu')) return;
     if (!this.active || !this.settings.toolbar || this.modals.size || doc.querySelector('.modal-container, .menu') || doc.activeElement?.closest?.('.inkstone-selection-toolbar')) return;
     let capture;
     try {
@@ -479,6 +504,58 @@ module.exports = class InkstoneAnnotations extends Plugin {
     try { this.hideToolbars(); new AnnotationModal(this, capture || this.capture(), kind).open(); }
     catch (error) { new Notice(error.message); }
   }
+  showAnnotationMenu(from, context = this.getAnnotationContext(), anchor, focusFirst = false) {
+    try {
+      if (!context) throw new Error('请先打开一篇 Markdown 笔记。');
+      this.assertCurrent(context);
+      const annotation = this.recordsFor(context.snapshot, context.filePath).find(record => record.from === from);
+      if (!annotation) throw new Error('标注已发生变化，请重新点击。');
+      const doc = context.view.containerEl.ownerDocument;
+      if (!anchor?.isConnected || anchor.ownerDocument !== doc || !context.view.contentEl.contains(anchor) || anchor.textContent !== annotation.text) throw new Error('标注正在更新，请重新点击。');
+      const rect = anchor.getBoundingClientRect();
+      const capture = { ...context, editor: context.view.editor, from: annotation.contentFrom, to: annotation.contentTo, annotation, reading: context.view.getMode() === 'preview' };
+      this.hideToolbars();
+      this.toolbarStates.set(doc, { capture, dismissed: true });
+      const timer = this.toolbarTimers.get(doc);
+      if (timer) { doc.defaultView.clearTimeout(timer); this.toolbarTimers.delete(doc); }
+      let menu;
+      const perform = async work => {
+        try {
+          this.assertCurrent(capture);
+          await work();
+          this.dismissToolbar(doc);
+        } catch (error) {
+          if (!menu.isConnected) new Notice(error.message);
+          throw error;
+        }
+      };
+      menu = annotationMenu.createAnnotationMenu({
+        doc, record: annotation,
+        bindSaveHotkey: save => {
+          const scope = new Scope(this.app.scope);
+          scope.register(['Mod'], 'Enter', event => {
+            if (menu.contains(event.target) && !event.isComposing) { save(); return false; }
+          });
+          this.app.keymap.pushScope(scope);
+          return () => this.app.keymap.popScope(scope);
+        },
+        onStyle: options => perform(() => this.commit(capture, options)),
+        onSaveNote: note => perform(() => this.commit(capture, { kind: annotation.kind, color: annotation.color, note })),
+        onDelete: () => perform(() => this.removeAnnotation(from, capture)),
+        onClose: () => { this.dismissToolbar(doc); if (anchor.isConnected) anchor.focus({ preventScroll: true }); },
+        onResize: () => { if (menu.isConnected) this.positionToolbar(menu, capture, rect); },
+      });
+      menu.addEventListener('pointerdown', event => {
+        if (!event.target.closest('textarea, input')) event.preventDefault();
+      });
+      menu.addEventListener('mousedown', event => {
+        if (!event.target.closest('textarea, input')) event.preventDefault();
+      });
+      doc.body.appendChild(menu); this.toolbars.set(doc, menu);
+      this.positionToolbar(menu, capture, rect);
+      if (focusFirst) menu.querySelector('button')?.focus();
+    } catch (error) { new Notice(error.message); }
+  }
   editAnnotation(from, context = this.getAnnotationContext()) {
     try {
       if (!context) throw new Error('请先打开一篇 Markdown 笔记。');
@@ -527,6 +604,9 @@ module.exports = class InkstoneAnnotations extends Plugin {
       editor.setCursor(editor.offsetToPos(plan.caretOffset));
       this.lastAction = { view: capture.view, filePath: capture.filePath, before: capture.snapshot, after };
     });
+    // Footnote-only edits may reuse the rendered paragraph without rerunning its postprocessor.
+    this.readingRefreshes.set(capture.view, { filePath: capture.filePath, before: capture.snapshot, after });
+    this.refreshReadingTargets(capture.view, after);
   }
   async commit(capture, options) {
     this.assertCurrent(capture);
@@ -550,6 +630,8 @@ module.exports = class InkstoneAnnotations extends Plugin {
         editor.undo();
         if (editor.getValue() !== action.before) throw new Error('撤销历史已变化，请在编辑视图中检查撤销结果。');
       });
+      this.readingRefreshes.set(action.view, { filePath: action.filePath, before: action.after, after: action.before });
+      this.refreshReadingTargets(action.view, action.before);
       this.lastAction = null;
     } catch (error) { new Notice(error.message); }
   }

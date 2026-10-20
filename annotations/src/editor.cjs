@@ -42,7 +42,7 @@ function createEditorExtension(plugin) {
       const edit = event => {
         event.preventDefault();
         event.stopPropagation();
-        Promise.resolve().then(() => plugin.editAnnotation(record.from, this.context))
+        Promise.resolve().then(() => plugin.showAnnotationMenu(record.from, this.context, element, event.type === 'keydown'))
           .catch(error => new Notice(error.message || '未能打开标注，请重新选择。'));
       };
       element.addEventListener('mousedown', event => event.preventDefault());

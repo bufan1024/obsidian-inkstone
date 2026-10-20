@@ -158,3 +158,17 @@ body.inkstone-annotations-monochrome {
   .inkstone-annotation-modal { max-height: calc(100dvh - 24px); overflow-y: auto; }
   .inkstone-reading-navigation button { min-height: 44px; min-width: 44px; }
 }
+
+.inkstone-annotation-menu { width: 300px; padding: 6px; line-height: 1.4; }
+.inkstone-annotation-menu-styles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; }
+.inkstone-annotation-menu .inkstone-toolbar-style { padding-inline: 3px; gap: 4px; }
+.inkstone-annotation-menu .inkstone-toolbar-dot { width: 14px; height: 14px; flex-basis: 14px; }
+.inkstone-annotation-menu-actions { display: flex; justify-content: space-between; gap: 6px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--background-modifier-border); }
+.inkstone-annotation-menu .inkstone-annotation-menu-delete { color: var(--text-error); }
+.inkstone-annotation-menu-note,
+.inkstone-annotation-menu-quote { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 8px 4px; color: var(--text-muted); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
+.inkstone-annotation-menu-quote { padding-inline-start: 8px; border-inline-start: 2px solid var(--background-modifier-border); }
+.inkstone-annotation-menu .inkstone-annotation-menu-input { display: block; width: 100%; min-height: 80px; max-height: 160px; margin: 8px 0 0; padding: 8px; resize: vertical; box-sizing: border-box; font: 14px/1.6 var(--font-interface); user-select: text; }
+.inkstone-annotation-menu-composer-actions { justify-content: flex-end; }
+.inkstone-annotation-menu-error { margin: 8px 4px 4px; color: var(--text-error); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.inkstone-annotation-menu [disabled] { cursor: wait; opacity: 0.6; }

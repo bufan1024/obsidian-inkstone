@@ -6,26 +6,38 @@ const vm = require('node:vm');
 const core = require('../src/core.cjs');
 class MarkdownView {}
 function pluginFixture(text = '<u class="inkstone-underline">宿主原文</u>') {
-  const notices = [], openedModals = [];
+  const notices = [], openedModals = [], builtMenus = [];
   const sandbox = { module: { exports: {} }, annotationCore: core, annotationViews: { VIEW_TYPE: 'inkstone-annotations-list' },
+    annotationMenu: { createAnnotationMenu(options) {
+      builtMenus.push(options);
+      return { ownerDocument: options.doc, isConnected: true, addEventListener() {}, remove() { this.isConnected = false; } };
+    } },
     require(name) { assert.equal(name, 'obsidian'); return { Plugin: class {}, Modal: class { open() { openedModals.push(this); } }, PluginSettingTab: class {}, MarkdownView, Notice: class { constructor(message) { notices.push(message); } } }; } };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/plugin.cjs'), 'utf8'), sandbox);
   const plugin = Object.create(sandbox.module.exports.prototype), events = {};
   const styles = new Map();
-  const doc = { body: { style: { getPropertyValue: name => styles.get(name) || '', getPropertyPriority: () => '', setProperty: (name, value) => styles.set(name, value), removeProperty: name => styles.delete(name) }, classList: { toggle() {} } }, getSelection: () => ({ isCollapsed: true }) };
+  const doc = { body: { appendChild() {}, style: { getPropertyValue: name => styles.get(name) || '', getPropertyPriority: () => '', setProperty: (name, value) => styles.set(name, value), removeProperty: name => styles.delete(name) }, classList: { toggle() {} } }, getSelection: () => ({ isCollapsed: true }) };
   const view = Object.assign(new MarkdownView(), { file: { path: 'host.md', basename: 'host', parent: {path: '/'} }, getMode: () => 'preview', getViewData: () => text,
     contentEl: { contains: () => true }, containerEl: { ownerDocument: doc } });
   view.leaf = { view }; view.editor = { getValue: () => text };
   plugin.app = { workspace: { activeLeaf: view.leaf, getActiveViewOfType: Type => view instanceof Type ? view : null, getLeavesOfType: () => [view.leaf] } };
-  Object.assign(plugin, { active: true, settings: {monochrome: false, toolbar: false}, sections: new WeakMap(), readingTargets: new WeakMap(), recordCache: new Map(), documents: new Set(), readingOriginals: new Map(), toolbars: new Map(), toolbarStates: new WeakMap(), toolbarTimers: new Map(), modals: new Set() });
+  Object.assign(plugin, { active: true, settings: {monochrome: false, toolbar: false}, sections: new WeakMap(), readingTargets: new WeakMap(), readingRefreshes: new WeakMap(), recordCache: new Map(), documents: new Set(), readingOriginals: new Map(), toolbars: new Map(), toolbarStates: new WeakMap(), toolbarTimers: new Map(), modals: new Set() });
   plugin.registerDomEvent = (_doc, name, callback) => { events[name] = callback; };
   plugin.bindDocument(doc);
-  const calls = []; plugin.editAnnotation = (...args) => calls.push(args);
-  const node = { dataset: {}, textContent: '宿主原文', setAttribute() {}, closest: () => node };
-  const element = { querySelectorAll: () => [node] };
+  const calls = []; plugin.editAnnotation = (...args) => calls.push(args); plugin.showAnnotationMenu = (...args) => calls.push(args);
+  const node = { ownerDocument: doc, isConnected: true, getBoundingClientRect: () => ({}), dataset: {}, textContent: '宿主原文', setAttribute() {}, closest: () => node };
+  const element = { querySelectorAll: () => [node], parentElement: view.contentEl };
+  node.parentElement = element;
   const render = (sourcePath, snapshot) => { node.textContent = core.parseAnnotations(snapshot)[0].text; plugin.processReadingSection(element, {sourcePath, getSectionInfo: () => ({text:snapshot,lineStart:0,lineEnd:0})}); };
   const click = () => events.click({target:node,preventDefault(){}});
-  return {plugin, view, node, render, click, calls, notices, openedModals, setText: value => { text = value; }};
+  const openMenu = () => {
+    node.textContent = core.parseAnnotations(text)[0].text;
+    plugin.positionToolbar = () => {};
+    Object.getPrototypeOf(plugin).showAnnotationMenu.call(plugin, 0, plugin.getAnnotationContext(), node);
+    assert.equal(builtMenus.length, 1);
+    return builtMenus[0];
+  };
+  return {plugin, view, node, render, click, calls, notices, openedModals, openMenu, setText: value => { text = value; }};
 }
 
 test('clicking an annotation embedded from another note never edits the host note', () => {
@@ -165,4 +177,74 @@ test('dismissed selection stays closed until the user makes a new selection', ()
   plugin.dismissToolbar(doc);plugin.showToolbar(doc);
   assert.equal(plugin.toolbars.size,0);
   assert.equal(plugin.toolbarStates.get(doc).dismissed,true);
+});
+
+test('clicking an existing mark opens an anchored menu instead of the full editor', () => {
+  const fixture=pluginFixture(), menus=[];
+  fixture.plugin.showAnnotationMenu=(...args)=>menus.push(args);
+  fixture.render('host.md',fixture.view.getViewData());fixture.click();
+  assert.equal(menus.length,1);
+  assert.equal(menus[0][2],fixture.node);
+  assert.equal(fixture.calls.length,0);
+  assert.equal(fixture.openedModals.length,0);
+});
+
+test('all existing-menu writes reject a changed note before invoking mutation helpers', async () => {
+  const fixture = pluginFixture(), options = fixture.openMenu(), writes = [];
+  fixture.plugin.commit = async () => writes.push('commit');
+  fixture.plugin.removeAnnotation = async () => writes.push('remove');
+  fixture.setText('原文已被用户修改');
+  await assert.rejects(() => options.onStyle({kind:'highlight',color:'blue'}), /变化/);
+  await assert.rejects(() => options.onSaveNote('新的想法'), /变化/);
+  await assert.rejects(() => options.onDelete(), /变化/);
+  assert.deepEqual(writes, []);
+});
+
+test('saving an idea through the small menu keeps an uncolored legacy highlight', async () => {
+  const fixture = pluginFixture('<mark class="inkstone-highlight">旧高亮</mark>');
+  fixture.plugin.settings.lastColor = 'blue';
+  const options = fixture.openMenu();
+  let result;
+  fixture.plugin.commit = async (capture, changes) => {
+    result = core.applyChanges(capture.snapshot, core.buildEditAnnotationPlan({document:capture.snapshot,from:capture.annotation.from,...changes}).changes);
+  };
+  await options.onSaveNote('补充想法');
+  const updated = core.parseAnnotations(result)[0];
+  assert.equal(updated.kind, 'highlight');
+  assert.equal(updated.color, null);
+  assert.equal(updated.note, '补充想法');
+  assert.equal(fixture.plugin.toolbars.size, 0);
+  assert.equal(fixture.openedModals.length, 0);
+});
+
+test('a reused reading paragraph receives the committed footnote snapshot only from its current source section', () => {
+  const before = '<u class="inkstone-underline">宿主原文</u>[^inkstone-1]\n\n[^inkstone-1]: 原想法';
+  const after = before.replace('原想法','更新想法');
+  const fixture = pluginFixture(before), {plugin, view, node} = fixture;
+  const element = node.parentElement;
+  let sectionText = before;
+  const context = {sourcePath:'host.md',getSectionInfo:()=>({text:sectionText,lineStart:0,lineEnd:0})};
+  plugin.processReadingSection(element, context);
+  view.contentEl.querySelectorAll = () => [node];
+  fixture.setText(after);
+  plugin.readingRefreshes.set(view, {filePath:'host.md',before,after});
+  plugin.refreshReadingTargets(view, after);
+  assert.throws(() => plugin.readingAnnotationContext(node, view), /更新/);
+  sectionText = after;
+  context.sourcePath = 'embedded.md';
+  plugin.refreshReadingTargets(view, after);
+  assert.throws(() => plugin.readingAnnotationContext(node, view), /更新/);
+  context.sourcePath = 'host.md';
+  const getInfo = context.getSectionInfo;
+  context.getSectionInfo = () => { throw new Error('section detached'); };
+  assert.doesNotThrow(() => plugin.refreshReadingTargets(view, after));
+  assert.throws(() => plugin.readingAnnotationContext(node, view), /更新/);
+  context.getSectionInfo = getInfo;
+  assert.equal(plugin.readingAnnotationContext(node, view).snapshot, after);
+  assert.equal(plugin.readingAnnotationContext(node, view).records[0].note, '更新想法');
+  fixture.setText(before);
+  sectionText = before;
+  assert.throws(() => plugin.readingAnnotationContext(node, view), /更新/);
+  plugin.readingRefreshes.set(view, {filePath:'host.md',before:after,after:before});
+  assert.equal(plugin.readingAnnotationContext(node, view).snapshot, before);
 });

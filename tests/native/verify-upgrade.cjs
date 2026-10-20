@@ -15,6 +15,7 @@ const results = [];
     await page.evaluate(async () => {
       if (!app.plugins.enabled) await app.plugins.setEnable(true);
       if (!app.plugins.plugins['inkstone-annotations']) await app.plugins.enablePluginAndSave('inkstone-annotations');
+      await app.plugins.plugins['inkstone-annotations'].setMonochrome(false);
     });
     const run = async (name, work) => {
       if (selectedCase !== 'all' && name !== selectedCase) return;
@@ -30,6 +31,7 @@ const results = [];
     let fixtureSequence=0;
     const runId=Date.now().toString(36);
     const fixture = async (text, mode = 'source') => {
+      await page.keyboard.press('Escape');
       const name=`QA/功能验证-${runId}-${++fixtureSequence}.md`;
       await page.evaluate(async ({text,mode,name}) => {
         for (const modal of [...app.plugins.plugins['inkstone-annotations'].modals]) modal.close();
@@ -58,6 +60,26 @@ const results = [];
       }
     };
     const data=()=>page.evaluate(()=>app.workspace.getLeaf(false).view.getViewData());
+    const rememberScope=()=>page.evaluate(()=>{
+      const current=app.keymap.windowScopes.get(window);
+      window.__inkstoneQaSavedScope={scope:current.scope,prevScopes:[...current.prevScopes]};
+    });
+    const assertScope=async active=>assert.equal(await page.evaluate(active=>{
+      const current=app.keymap.windowScopes.get(window),saved=window.__inkstoneQaSavedScope;
+      if(active)return current.scope!==saved.scope&&current.prevScopes.length===saved.prevScopes.length+1;
+      return current.scope===saved.scope&&current.prevScopes.length===saved.prevScopes.length&&current.prevScopes.every((scope,index)=>scope===saved.prevScopes[index]);
+    },active),true,active?'The thought composer should own a temporary keyboard scope':'Closing the thought composer should restore the exact previous keyboard scope');
+    const existingAnnotation=async(mode='preview',index=0)=>{
+      if(mode==='source')await page.evaluate(()=>app.workspace.getLeaf(false).view.editor.setCursor({line:2,ch:0}));
+      const selector=mode==='preview'?'.markdown-preview-view :is(mark.inkstone-highlight,u.inkstone-underline)':'.cm-content .inkstone-live-annotation';
+      await page.waitForFunction(({selector,index,mode})=>{
+        const view=app.workspace.getLeaf(false).view,node=view.contentEl.querySelectorAll(selector)[index];
+        if(!node)return false;
+        if(mode!=='preview')return true;
+        try{return !!app.plugins.plugins['inkstone-annotations'].readingAnnotationContext(node,view);}catch{return false;}
+      },{selector,index,mode});
+      return page.locator(`[data-inkstone-qa] ${selector}`).nth(index);
+    };
     await run('reading-repeat',async()=>{
       await fixture('第一处观点，第二处观点，第三处观点。\n','preview');
       await page.evaluate(()=>{
@@ -78,20 +100,52 @@ const results = [];
       await page.waitForFunction(()=>app.workspace.getLeaf(false).view.contentEl.querySelectorAll('.markdown-preview-view mark.inkstone-highlight').length===2,{},{timeout:2500});
       assert((await data()).includes('inkstone-blue">第二处观点</mark>'));
     });
+    await run('existing-annotation-menu',async()=>{
+      for(const mode of ['preview','source']) {
+        await fixture('<mark class="inkstone-highlight inkstone-yellow">轻点已有标注</mark>[^inkstone-1]\n\n光标在这里。\n\n[^inkstone-1]: 原有想法\n',mode);
+        const annotation=await existingAnnotation(mode);await annotation.click();
+        assert.equal(await page.locator('.inkstone-annotation-modal').count(),0,`${mode} clicking an existing annotation should avoid the full modal`);
+        await page.locator('.inkstone-annotation-menu').waitFor({timeout:2500});
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
+      }
+    });
     await run('manage',async()=>{
       await fixture('<mark class="inkstone-highlight inkstone-yellow">已有观点</mark>[^inkstone-1]\n\n[^inkstone-1]: 原备注\n','preview');
-      await page.locator('[data-inkstone-qa] .markdown-preview-view mark.inkstone-highlight').click();
-      await page.locator('.inkstone-annotation-modal').waitFor({timeout:2500});
-      assert.equal(await page.locator('textarea[aria-label="备注内容"]').inputValue(),'原备注');
-      await page.getByRole('button',{name:'蓝色',exact:true}).click();
-      await page.locator('textarea[aria-label="备注内容"]').fill('更新备注');
-      await page.getByRole('button',{name:'保存标注',exact:true}).click();
-      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-modal'));
+      await rememberScope();
+      await (await existingAnnotation()).click();
+      const menu=page.locator('.inkstone-annotation-menu');await menu.waitFor();
+      assert.equal(await page.locator('.inkstone-annotation-modal').count(),0);
+      await menu.getByRole('button',{name:'蓝色',exact:true}).click();
+      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
       assert((await data()).includes('inkstone-blue'));
+      assert((await data()).includes('[^inkstone-1]: 原备注'));
+      await (await existingAnnotation()).click();
+      await menu.getByRole('button',{name:'编辑想法',exact:true}).click();
+      await assertScope(true);
+      const note=menu.getByRole('textbox',{name:'想法内容',exact:true});
+      assert.equal(await note.inputValue(),'原备注');
+      await note.fill('取消的草稿');
+      await menu.getByRole('button',{name:'取消',exact:true}).click();
+      await assertScope(false);
+      assert((await data()).includes('[^inkstone-1]: 原备注'));
+      assert(!(await data()).includes('取消的草稿'));
+      await menu.getByRole('button',{name:'编辑想法',exact:true}).click();
+      await note.fill('更新备注');await note.press(process.platform==='darwin'?'Meta+Enter':'Control+Enter');
+      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
+      await assertScope(false);
       assert((await data()).includes('更新备注'));
-      await page.locator('[data-inkstone-qa] .markdown-preview-view mark.inkstone-highlight').click();
-      await page.getByRole('button',{name:'移除标注',exact:true}).click();
-      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-modal'));
+      assert((await data()).includes('inkstone-blue'));
+      await (await existingAnnotation()).click();
+      assert.equal(await menu.locator('.inkstone-annotation-menu-note').textContent(),'更新备注');
+      await page.keyboard.press('Escape');
+      await command('undo-annotation');
+      assert((await data()).includes('[^inkstone-1]: 原备注'));
+      assert(!(await data()).includes('更新备注'));
+      await (await existingAnnotation()).click();
+      assert.equal(await menu.locator('.inkstone-annotation-menu-note').textContent(),'原备注');
+      await menu.getByRole('button',{name:'删除标注',exact:true}).click();
+      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
       assert(!(await data()).includes('inkstone-'));
     });
     await run('live-preview',async()=>{
@@ -213,16 +267,120 @@ const results = [];
       await page.waitForFunction(()=>app.workspace.getLeaf(false).view.contentEl.querySelectorAll('.inkstone-live-annotation').length===2);
       assert.deepEqual(await widgets.allTextContents(),['甲 & 乙','下划线']);
       await widgets.first().click();
-      await page.locator('textarea[aria-label="备注内容"]').fill('实时预览备注');
-      await page.getByRole('button',{name:'蓝色',exact:true}).click();
-      await page.getByRole('button',{name:'保存标注',exact:true}).click();
-      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-modal'));
+      const menu=page.locator('.inkstone-annotation-menu');await menu.waitFor();
+      assert.equal(await page.locator('.inkstone-annotation-modal').count(),0);
+      await menu.getByRole('button',{name:'蓝色',exact:true}).click();
+      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
+      await (await existingAnnotation('source')).click();
+      await menu.getByRole('button',{name:'写想法',exact:true}).click();
+      await menu.getByRole('textbox',{name:'想法内容',exact:true}).fill('实时预览备注');
+      await menu.getByRole('button',{name:'保存想法',exact:true}).click();
+      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
       assert((await data()).includes('inkstone-blue')&&(await data()).includes('实时预览备注'));
-      await page.evaluate(()=>{const view=app.workspace.getLeaf(false).view;view.editor.setCursor(view.editor.offsetToPos(view.getViewData().indexOf('甲')+1));});
+      await page.evaluate(()=>{const view=app.workspace.getLeaf(false).view;view.editor.setCursor(view.editor.offsetToPos(view.getViewData().indexOf('甲')+1));view.editor.focus();});
+      await page.waitForFunction(()=>app.workspace.getLeaf(false).view.contentEl.querySelector('.cm-content').textContent.includes('<mark class='));
       assert((await page.locator('[data-inkstone-qa] .cm-content').textContent()).includes('<mark class='));
       await page.evaluate(async()=>{const leaf=app.workspace.getLeaf(false);const state=leaf.getViewState();await leaf.setViewState({...state,state:{...state.state,mode:'source',source:true}});});
       await page.waitForFunction(()=>!app.workspace.getLeaf(false).view.contentEl.querySelector('.markdown-source-view.is-live-preview'));
       assert.equal(await widgets.count(),0);
+    });
+    await run('existing-menu-keyboard-and-dismissal',async()=>{
+      for(const mode of ['preview','source']) {
+        await fixture('<mark class="inkstone-highlight inkstone-green">键盘已有标注</mark>\n\n空白正文。\n',mode);
+        await rememberScope();
+        const annotation=await existingAnnotation(mode);
+        for(const key of ['Enter','Space']) {
+          await annotation.focus();await annotation.press(key);
+          await page.locator('.inkstone-annotation-menu').waitFor();
+          assert.equal(await page.locator('.inkstone-annotation-modal').count(),0);
+          await page.keyboard.press('Escape');
+          await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
+        }
+        await annotation.click();
+        await page.locator('.inkstone-annotation-menu').getByRole('button',{name:'写想法',exact:true}).click();
+        await assertScope(true);await page.keyboard.press('Escape');
+        await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
+        await assertScope(false);
+        await annotation.click();
+        await page.mouse.click(25,25);
+        await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
+        await annotation.click();
+        await page.evaluate(()=>app.workspace.getLeaf(false).view.contentEl.dispatchEvent(new Event('scroll')));
+        await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
+      }
+      await fixture('<u class="inkstone-underline">切文件前标注</u>\n','preview');
+      await (await existingAnnotation()).click();
+      await page.evaluate(async()=>{
+        const path=`QA/菜单关闭-${Date.now()}.md`,file=await app.vault.create(path,'切换到其他笔记。\n');
+        await app.workspace.getLeaf(false).openFile(file);
+      });
+      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
+      await fixture('<u class="inkstone-underline">停用前标注</u>\n','preview');
+      await rememberScope();
+      await (await existingAnnotation()).click();
+      await page.locator('.inkstone-annotation-menu').getByRole('button',{name:'写想法',exact:true}).click();
+      await assertScope(true);
+      await page.evaluate(async()=>{await app.plugins.unloadPlugin('inkstone-annotations');});
+      assert.equal(await page.locator('.inkstone-annotation-menu').count(),0);
+      await assertScope(false);
+      await page.evaluate(async()=>{await app.plugins.loadPlugin('inkstone-annotations');app.workspace.getLeaf(false).view.previewMode.rerender(true);});
+    });
+    await run('existing-menu-stale-write-protection',async()=>{
+      for(const action of ['蓝色','保存想法','删除标注']) {
+        const original='<mark class="inkstone-highlight inkstone-yellow">过期菜单标注</mark>\n\n其他正文。\n';
+        await fixture(original,'preview');await (await existingAnnotation()).click();
+        const menu=page.locator('.inkstone-annotation-menu');
+        if(action==='保存想法') {
+          await menu.getByRole('button',{name:'写想法',exact:true}).click();
+          await menu.getByRole('textbox',{name:'想法内容',exact:true}).fill('不应写入的旧想法');
+        }
+        const updated=original+'外部新增内容。\n';
+        await page.evaluate(({updated,action})=>{
+          const button=[...document.querySelectorAll('.inkstone-annotation-menu button')].find(button=>(button.getAttribute('aria-label')||button.textContent).trim()===action);
+          if(!button)throw Error('Stale action button missing: '+action);
+          const view=app.workspace.getLeaf(false).view;view.setViewData(updated,false);
+          if(view.getViewData()!==updated)throw Error('QA snapshot mutation failed');
+          button.click();
+        },{updated,action});
+        await page.waitForFunction(()=>document.querySelector('.inkstone-annotation-menu-error')?.textContent||!document.querySelector('.inkstone-annotation-menu'));
+        assert.equal(await data(),updated,`${action} from an old menu must not change the newer snapshot`);
+        assert.equal(await page.locator('.inkstone-annotation-modal').count(),0);
+      }
+    });
+    await run('existing-menu-shared-note-protection',async()=>{
+      await fixture('<mark class="inkstone-highlight inkstone-yellow">甲观点</mark>[^inkstone-1]，<mark class="inkstone-highlight inkstone-blue">乙观点</mark>[^inkstone-1]\n\n[^inkstone-1]: 共享原想法\n','preview');
+      await (await existingAnnotation()).click();
+      const menu=page.locator('.inkstone-annotation-menu');
+      await menu.getByRole('button',{name:'编辑想法',exact:true}).click();
+      await menu.getByRole('textbox',{name:'想法内容',exact:true}).fill('甲的新想法');
+      await menu.getByRole('button',{name:'保存想法',exact:true}).click();
+      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
+      const records=await page.evaluate(()=>{const view=app.workspace.getLeaf(false).view;return app.plugins.plugins['inkstone-annotations'].recordsFor(view.getViewData(),view.file.path).map(({text,note})=>({text,note}));});
+      assert.deepEqual(records,[{text:'甲观点',note:'甲的新想法'},{text:'乙观点',note:'共享原想法'}]);
+      await (await existingAnnotation()).click();await menu.getByRole('button',{name:'删除标注',exact:true}).click();
+      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
+      const text=await data();assert(text.includes('甲观点，<mark'));assert(text.includes('[^inkstone-1]: 共享原想法'));assert(!text.includes('甲的新想法'));
+    });
+    await run('existing-menu-narrow-layout',async()=>{
+      await page.evaluate(()=>{app.workspace.leftSplit.collapse();app.workspace.rightSplit.collapse();});
+      await page.setViewportSize({width:390,height:844});
+      try{
+        await fixture('<mark class="inkstone-highlight inkstone-blue">窄屏已有标注</mark>\n\n点击这里可以写想法。\n','preview');
+        await (await existingAnnotation()).click();
+        const menu=page.locator('.inkstone-annotation-menu');await menu.waitFor();
+        const check=async()=>{
+          const box=await menu.boundingBox();assert(box.x>=0&&box.x+box.width<=390);assert(box.y>=0&&box.y+box.height<=844);
+          const size=await menu.evaluate(node=>({width:node.clientWidth,scroll:node.scrollWidth}));assert(size.scroll<=size.width+1);
+        };
+        await check();
+        await menu.getByRole('button',{name:'写想法',exact:true}).click();
+        await menu.getByRole('textbox',{name:'想法内容',exact:true}).fill('窄屏下也能直接写想法。');
+        await check();
+        await menu.getByRole('textbox',{name:'想法内容',exact:true}).dispatchEvent('scroll');
+        assert.equal(await menu.count(),1,'Scrolling inside the thought input should keep its draft open');
+        assert.equal(await page.locator('.inkstone-annotation-modal').count(),0);
+        await page.keyboard.press('Escape');
+      }finally{await page.setViewportSize({width:1440,height:1000});}
     });
     await run('font-and-reading-preferences',async()=>{
       await fixture('正文随着原生字号和阅读预设变化。\n','preview');
