@@ -47,17 +47,66 @@
 .markdown-rendered [data-inkstone-from]:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .inkstone-remove-annotation { margin-inline-end: auto; }
 .inkstone-annotation-actions { flex-wrap: wrap; }
-.inkstone-annotation-sidebar { padding: 16px; overflow-y: auto; }
-.inkstone-annotation-sidebar h2 { margin-block: 0 12px; font-size: 18px; }
-.inkstone-annotation-sidebar-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-block: 12px; }
-.inkstone-annotation-sidebar select { max-width: 100%; min-height: 36px; }
-.inkstone-annotation-card { border: 1px solid var(--background-modifier-border); border-radius: 4px; padding: 12px; margin-block: 12px; overflow-wrap: anywhere; }
-.inkstone-annotation-card p { margin-block: 8px; }
-.inkstone-annotation-card-note { white-space: pre-wrap; color: var(--text-muted); }
-.inkstone-annotation-card-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-.inkstone-annotation-card-actions button { min-height: 36px; }
-.inkstone-annotation-card-text { margin: 8px 0; padding-inline-start: 10px; border-inline-start: 2px solid var(--background-modifier-border); }
-.inkstone-annotation-card-kind { display: inline-block; font-size: 12px; color: var(--text-muted); border-bottom: 1px solid currentColor; }
+.inkstone-annotation-sidebar {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%;
+  padding: 0; overflow: hidden; color: var(--text-normal); font: 13px/1.5 var(--font-interface);
+}
+.inkstone-annotation-sidebar-header,
+.inkstone-annotation-sidebar-list { min-width: 0; box-sizing: border-box; }
+.inkstone-annotation-sidebar-header { flex: 0 0 auto; padding: 18px 18px 14px; border-bottom: 1px solid var(--background-modifier-border); }
+.inkstone-annotation-sidebar-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; }
+.inkstone-annotation-sidebar h2 { min-width: 0; margin: 0; font: 600 14px/1.5 var(--font-interface); color: var(--text-normal); }
+.inkstone-annotation-sidebar-count { flex: 0 0 auto; margin: 0; color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.inkstone-annotation-sidebar-source { min-width: 0; margin-top: 14px; }
+.inkstone-annotation-sidebar-source-name {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  margin: 0; color: var(--text-normal); font-size: 15px; font-weight: 550; line-height: 1.5; overflow-wrap: anywhere;
+}
+.inkstone-annotation-sidebar-source-folder { margin: 3px 0 0; overflow: hidden; color: var(--text-muted); font-size: 11px; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; }
+.inkstone-annotation-sidebar-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; margin-top: 12px; }
+.inkstone-annotation-sidebar .inkstone-annotation-sidebar-toolbar select {
+  flex: 1 1 110px; min-width: 0; max-width: 100%; height: 30px; min-height: 30px;
+  margin: 0; padding: 0 26px 0 8px; border: 1px solid var(--background-modifier-border); border-radius: 4px;
+  color: var(--text-normal); background-color: var(--background-primary); box-shadow: none; font: 12px/1.4 var(--font-interface);
+}
+.inkstone-annotation-sidebar .inkstone-annotation-sidebar-toolbar button,
+.inkstone-annotation-sidebar .inkstone-annotation-card-actions button {
+  flex: 0 0 auto; min-height: 30px; margin: 0; padding: 3px 8px;
+  border: 1px solid transparent; border-radius: 4px; background: transparent;
+  color: var(--text-muted); box-shadow: none; font: 12px/1.4 var(--font-interface); white-space: nowrap; cursor: pointer;
+}
+.inkstone-annotation-sidebar .inkstone-annotation-sidebar-toolbar button { border-color: var(--background-modifier-border); color: var(--text-normal); }
+.inkstone-annotation-sidebar .inkstone-annotation-sidebar-toolbar button:hover,
+.inkstone-annotation-sidebar .inkstone-annotation-card-actions button:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.inkstone-annotation-sidebar :is(.inkstone-annotation-sidebar-toolbar, .inkstone-annotation-card-actions) :is(button, select):focus-visible { outline: 2px solid var(--text-normal); outline-offset: 2px; }
+.inkstone-annotation-sidebar :is(.inkstone-annotation-sidebar-toolbar, .inkstone-annotation-card-actions) :is(button, select):disabled { color: var(--text-faint); cursor: default; }
+.inkstone-annotation-sidebar-list { flex: 1 1 auto; min-height: 0; padding: 0 18px 16px; overflow-x: hidden; overflow-y: auto; scrollbar-gutter: stable; }
+.inkstone-annotation-card { min-width: 0; margin: 0; padding: 17px 0 14px; border: 0; border-bottom: 1px solid var(--background-modifier-border); border-radius: 0; background: transparent; box-shadow: none; overflow-wrap: anywhere; }
+.inkstone-annotation-card:last-child { border-bottom: 0; }
+.inkstone-annotation-card-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.inkstone-annotation-card-kind { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--text-muted); font: 11px/1.5 var(--font-interface); }
+.inkstone-annotation-card-swatch { display: inline-block; flex: 0 0 11px; width: 11px; height: 11px; border-radius: 1px; }
+.inkstone-annotation-kind-underline .inkstone-annotation-card-swatch { height: 9px; border-bottom: 1px solid currentColor; background: transparent; }
+.inkstone-annotation-card-index { flex: 0 0 auto; color: var(--text-faint); font: 11px/1.5 var(--font-interface); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.inkstone-annotation-sidebar .inkstone-annotation-card-text { margin: 10px 0 0; padding: 0; border: 0; background: transparent; color: var(--text-normal); font: 400 15px/1.7 var(--font-text, var(--font-interface)); white-space: pre-wrap; overflow-wrap: anywhere; }
+.inkstone-annotation-card-thought { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 8px; min-width: 0; margin-top: 10px; }
+.inkstone-annotation-card-note-label { color: var(--text-muted); font: 11px/1.65 var(--font-interface); white-space: nowrap; }
+.inkstone-annotation-card-note { min-width: 0; margin: 0; color: var(--text-muted); font: 13px/1.65 var(--font-interface); white-space: pre-wrap; overflow-wrap: anywhere; }
+.inkstone-annotation-card-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; margin-top: 10px; }
+.inkstone-annotation-sidebar .inkstone-annotation-card-actions button { height: 30px; transition: none; animation: none; }
+.inkstone-annotation-sidebar .inkstone-annotation-card-actions button:first-child { padding-inline: 8px; border-color: var(--background-modifier-border); color: var(--text-normal); }
+.inkstone-annotation-sidebar .inkstone-annotation-card-actions .inkstone-annotation-card-delete { margin-inline-start: auto; color: var(--text-muted); }
+.inkstone-annotation-sidebar .inkstone-annotation-card-actions .inkstone-annotation-card-delete:is(:hover, :focus-visible):not(:disabled) { color: var(--text-error); }
+.inkstone-annotation-sidebar .inkstone-annotation-card-actions button:disabled,
+.inkstone-annotation-sidebar .inkstone-annotation-card-actions button:disabled:hover { background: transparent; color: var(--text-faint); opacity: 1; cursor: default; }
+.inkstone-annotation-sidebar-empty { margin: 0; padding: 20px 0; color: var(--text-muted); font: 13px/1.75 var(--font-interface); overflow-wrap: anywhere; }
+@media (pointer: coarse) {
+  .inkstone-annotation-sidebar .inkstone-annotation-sidebar-toolbar select,
+  .inkstone-annotation-sidebar .inkstone-annotation-sidebar-toolbar button,
+  .inkstone-annotation-sidebar .inkstone-annotation-card-actions button { min-height: 44px; }
+  .inkstone-annotation-sidebar .inkstone-annotation-sidebar-toolbar button,
+  .inkstone-annotation-sidebar .inkstone-annotation-card-actions button { min-width: 44px; }
+}
 .inkstone-selection-toolbar {
   position: fixed; z-index: 90; padding: 4px; max-width: calc(100vw - 16px);
   border: 1px solid var(--background-modifier-border); border-radius: 10px;

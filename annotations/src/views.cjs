@@ -12,6 +12,9 @@ function createSidebarClass(plugin) {
       this.events = [];
       this.opened = false;
       this.nonMarkdownActive = false;
+      this.listEl = null;
+      this.renderedFilePath = null;
+      this.renderedFilter = null;
     }
 
     getViewType() { return VIEW_TYPE; }
@@ -51,6 +54,9 @@ function createSidebarClass(plugin) {
       this.detachEvents();
       this.contentEl.replaceChildren();
       this.contentEl.classList.remove('inkstone-annotation-sidebar');
+      this.listEl = null;
+      this.renderedFilePath = null;
+      this.renderedFilter = null;
     }
 
     async perform(action) {
@@ -65,7 +71,11 @@ function createSidebarClass(plugin) {
       const filtered = records.filter(record => this.filter === 'all' ||
         (this.filter === 'underline' ? record.kind === 'underline' : record.kind === 'highlight' && record.color === this.filter));
       const content = this.contentEl;
+      const filePath = context?.filePath || null;
+      const scrollTop = this.renderedFilePath === filePath && this.renderedFilter === this.filter ? this.listEl?.scrollTop || 0 : 0;
       content.replaceChildren();
+      this.renderedFilePath = filePath;
+      this.renderedFilter = this.filter;
       const add = (parent, tag, text, className) => {
         const element = content.ownerDocument.createElement(tag);
         if (text !== undefined) element.textContent = text;
@@ -73,9 +83,24 @@ function createSidebarClass(plugin) {
         parent.append(element);
         return element;
       };
-      add(content, 'h2', '当前笔记标注');
-      add(content, 'p', context ? context.filePath : '打开一篇 Markdown 笔记后查看标注。', 'inkstone-annotation-sidebar-source');
-      const toolbar = add(content, 'div', undefined, 'inkstone-annotation-sidebar-toolbar');
+      const header = add(content, 'header', undefined, 'inkstone-annotation-sidebar-header');
+      const heading = add(header, 'div', undefined, 'inkstone-annotation-sidebar-heading');
+      add(heading, 'h2', '当前笔记标注');
+      const status = add(heading, 'p', `${filtered.length} / ${records.length} 条标注`, 'inkstone-annotation-sidebar-count');
+      status.setAttribute('aria-live', 'polite');
+      const source = add(header, 'div', undefined, 'inkstone-annotation-sidebar-source');
+      if (context) {
+        const parts = context.filePath.split('/');
+        const file = parts.pop();
+        source.setAttribute('title', context.filePath);
+        source.setAttribute('aria-label', `当前笔记：${context.filePath}`);
+        add(source, 'p', file.replace(/\.md$/i, '') || file, 'inkstone-annotation-sidebar-source-name');
+        add(source, 'p', parts.join(' / ') || '笔记库根目录', 'inkstone-annotation-sidebar-source-folder');
+      } else {
+        add(source, 'p', '选择一篇笔记', 'inkstone-annotation-sidebar-source-name');
+        add(source, 'p', '打开一篇 Markdown 笔记后查看标注。', 'inkstone-annotation-sidebar-source-folder');
+      }
+      const toolbar = add(header, 'div', undefined, 'inkstone-annotation-sidebar-toolbar');
       const filter = add(toolbar, 'select');
       filter.setAttribute('aria-label', '筛选标注颜色');
       for (const [value, label] of FILTERS) {
@@ -89,27 +114,41 @@ function createSidebarClass(plugin) {
       exportButton.setAttribute('type', 'button');
       exportButton.disabled = records.length === 0;
       exportButton.addEventListener('click', () => this.perform(() => plugin.exportAnnotations()));
-      const status = add(content, 'p', `${filtered.length} / ${records.length} 条标注`, 'inkstone-annotation-sidebar-count');
-      status.setAttribute('aria-live', 'polite');
+      const list = add(content, 'div', undefined, 'inkstone-annotation-sidebar-list');
+      this.listEl = list;
       if (!context || filtered.length === 0) {
-        add(content, 'p', !context ? '暂无当前笔记。' : records.length ? '没有符合筛选条件的标注。' : '当前笔记暂无标注。', 'inkstone-annotation-sidebar-empty');
+        add(list, 'p', !context ? '暂无当前笔记。' : records.length ? '没有符合筛选条件的标注。' : '当前笔记暂无标注。', 'inkstone-annotation-sidebar-empty');
         return;
       }
-      const list = add(content, 'div', undefined, 'inkstone-annotation-sidebar-list');
       for (const record of filtered) {
         const card = add(list, 'article', undefined, 'inkstone-annotation-card');
+        card.setAttribute('data-kind', record.kind);
+        card.setAttribute('data-color', record.color || '');
+        const meta = add(card, 'div', undefined, 'inkstone-annotation-card-meta');
         const label = record.kind === 'underline' ? '下划线' : FILTERS.find(([value]) => value === record.color)?.[1] || '高亮';
-        const badge = add(card, 'span', label, `inkstone-annotation-card-kind inkstone-annotation-kind-${record.kind === 'underline' ? 'underline' : record.color}`);
+        const badge = add(meta, 'span', undefined, `inkstone-annotation-card-kind inkstone-annotation-kind-${record.kind === 'underline' ? 'underline' : record.color || 'default'}`);
         badge.setAttribute('aria-label', `标注样式：${label}`);
+        const swatch = add(badge, 'span', undefined, `inkstone-annotation-card-swatch inkstone-swatch-${record.kind === 'underline' ? 'underline' : record.color || 'default'}`);
+        swatch.setAttribute('aria-hidden', 'true');
+        add(badge, 'span', label);
+        const ordinal = records.indexOf(record) + 1;
+        const index = add(meta, 'span', String(ordinal).padStart(2, '0'), 'inkstone-annotation-card-index');
+        index.setAttribute('aria-label', `第 ${ordinal} 条标注`);
         add(card, 'blockquote', record.text, 'inkstone-annotation-card-text');
-        if (record.note) add(card, 'p', record.note, 'inkstone-annotation-card-note');
+        if (record.note) {
+          const thought = add(card, 'div', undefined, 'inkstone-annotation-card-thought');
+          add(thought, 'span', '想法', 'inkstone-annotation-card-note-label');
+          add(thought, 'p', record.note, 'inkstone-annotation-card-note');
+        }
         const actions = add(card, 'div', undefined, 'inkstone-annotation-card-actions');
         for (const [title, method] of [['定位原文', 'revealAnnotation'], ['编辑', 'editAnnotation'], ['删除', 'removeAnnotation']]) {
           const action = add(actions, 'button', title);
           action.setAttribute('type', 'button');
+          if (method === 'removeAnnotation') action.className = 'inkstone-annotation-card-delete';
           action.addEventListener('click', () => this.perform(() => plugin[method](record.from, context)));
         }
       }
+      list.scrollTop = scrollTop;
     }
   };
 }

@@ -73,7 +73,11 @@ test('sidebar lists current excerpts and notes as text and filters underline ind
   const fixture = setup();
   await fixture.view.onOpen();
   assert.equal(cards(fixture.view).length, 2);
-  assert.match(text(fixture.view.contentEl), /阅读\/笔记\.md/);
+  const source = allNodes(fixture.view.contentEl).find(node => node.className === 'inkstone-annotation-sidebar-source');
+  assert.equal(source.attributes.title, '阅读/笔记.md');
+  assert.equal(source.attributes['aria-label'], '当前笔记：阅读/笔记.md');
+  assert.equal(source.children[0].textContent, '笔记');
+  assert.equal(source.children[1].textContent, '阅读');
   assert.match(text(fixture.view.contentEl), /甲 <b>原文<\/b>/);
   assert.match(text(fixture.view.contentEl), /记得复习/);
   const filter = allNodes(fixture.view.contentEl).find(node => node.attributes['aria-label'] === '筛选标注颜色');
@@ -130,4 +134,25 @@ test('vault changes refresh notes and closing detaches all event subscriptions',
   assert.equal(fixture.view.contentEl.children.length, 0);
   await fixture.view.onOpen();
   assert.equal(cards(fixture.view).length, 1);
+});
+
+test('refreshing the same note keeps list position while filtering and changing notes start at the top', async () => {
+  const fixture = setup();
+  const list = () => allNodes(fixture.view.contentEl).find(node => node.className === 'inkstone-annotation-sidebar-list');
+  await fixture.view.onOpen();
+  list().scrollTop = 144;
+  fixture.setContext({ ...fixture.context, snapshot: '更新正文' });
+  fixture.workspace.emit('editor-change');
+  assert.equal(list().scrollTop, 144);
+  const filter = allNodes(fixture.view.contentEl).find(node => node.attributes['aria-label'] === '筛选标注颜色');
+  filter.value = 'underline';
+  filter.dispatchEvent(new Event('change'));
+  assert.equal(list().scrollTop, 0);
+  list().scrollTop = 70;
+  fixture.setContext({ ...fixture.context, filePath: '阅读/另一篇.md' });
+  fixture.workspace.emit('active-leaf-change', { view: { getViewType: () => 'markdown' } });
+  assert.equal(list().scrollTop, 0);
+  await fixture.view.onClose();
+  await fixture.view.onOpen();
+  assert.equal(list().scrollTop, 0);
 });

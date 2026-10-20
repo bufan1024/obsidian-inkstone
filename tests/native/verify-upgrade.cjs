@@ -30,9 +30,9 @@ const results = [];
     }, id);
     let fixtureSequence=0;
     const runId=Date.now().toString(36);
-    const fixture = async (text, mode = 'source') => {
+    const fixture = async (text, mode = 'source', explicitName) => {
       await page.keyboard.press('Escape');
-      const name=`QA/功能验证-${runId}-${++fixtureSequence}.md`;
+      const name=explicitName||`QA/功能验证-${runId}-${++fixtureSequence}.md`;
       await page.evaluate(async ({text,mode,name}) => {
         for (const modal of [...app.plugins.plugins['inkstone-annotations'].modals]) modal.close();
         app.plugins.plugins['inkstone-annotations'].hideToolbars();
@@ -86,6 +86,19 @@ const results = [];
         try{return !!app.plugins.plugins['inkstone-annotations'].readingAnnotationContext(node,view);}catch{return false;}
       },{selector,index,mode});
       return page.locator(`[data-inkstone-qa] ${selector}`).nth(index);
+    };
+    const longSidebarFixture=async()=>{
+      const folder='QA/侧栏视觉回归/'+('很长的中文目录'.repeat(5))+'LongFolderWithoutSpaces'.repeat(3);
+      await page.evaluate(async folder=>{let current='';for(const part of folder.split('/')){current=current?current+'/'+part:part;if(!app.vault.getAbstractFileByPath(current))await app.vault.createFolder(current);}},folder);
+      const basename='阅读札记与思考'.repeat(3)+'LongEnglishFilenameWithoutSpaces'.repeat(3)+`-${runId}-${++fixtureSequence}`;
+      const filePath=`${folder}/${basename}.md`;
+      const records=Array.from({length:12},(_,index)=>({color:['green','blue','yellow','rose'][index%4],text:index===1?'中英文引用'+('LongEnglishQuoteWithoutAnySpaces'.repeat(5))+'。':`第${index+1}条观点：把阅读中的共鸣，变成自己的理解与想法。`,note:index===1?('LongEnglishThoughtWithoutAnySpaces'.repeat(5))+'，后面接上中文，操作按钮也应该始终可见。':`第${index+1}条想法：下次重读时，也记得回看此刻的理解。`}));
+      const text=records.map((record,index)=>`<mark class="inkstone-highlight inkstone-${record.color}">${record.text}</mark>[^inkstone-${index+1}]`).join('\n\n')+'\n\n'+records.map((record,index)=>`[^inkstone-${index+1}]: ${record.note}`).join('\n')+'\n';
+      await fixture(text,'source',filePath);return{filePath,basename,text};
+    };
+    const sidebarWidth=async width=>{
+      await page.evaluate(width=>{app.workspace.rightSplit.expand();app.workspace.rightSplit.setSize(width);},width);
+      await page.waitForFunction(width=>Math.abs(document.querySelector('.inkstone-annotation-sidebar').getBoundingClientRect().width-width)<=1,width);
     };
     await run('reading-repeat',async()=>{
       await fixture('第一处观点，第二处观点，第三处观点。\n','preview');
@@ -166,6 +179,64 @@ const results = [];
       await command('show-annotations');
       await page.locator('.inkstone-annotation-sidebar').waitFor({timeout:2500});
       assert((await page.locator('.inkstone-annotation-sidebar').textContent()).includes('侧栏观点'));
+    });
+    await run('sidebar-responsive-layout',async()=>{
+      const context=await longSidebarFixture();
+      await command('show-annotations');
+      assert.equal(await page.locator('.inkstone-annotation-sidebar-header').count(),1,'The sidebar should group its heading, source and controls in a fixed header');
+      const sidebar=page.locator('.inkstone-annotation-sidebar'),filter=sidebar.getByLabel('筛选标注颜色');await filter.selectOption('all');
+      for(const width of [240,280,360,480]) {
+        await sidebarWidth(width);
+        await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>{node.scrollTop=0;});
+        const metrics=await sidebar.evaluate(node=>{
+          const header=node.querySelector('.inkstone-annotation-sidebar-header'),title=header.querySelector('h2'),count=header.querySelector('.inkstone-annotation-sidebar-count'),name=header.querySelector('.inkstone-annotation-sidebar-source-name'),folder=header.querySelector('.inkstone-annotation-sidebar-source-folder'),source=header.querySelector('.inkstone-annotation-sidebar-source'),card=node.querySelector('.inkstone-annotation-card'),quote=card.querySelector('.inkstone-annotation-card-text'),note=card.querySelector('.inkstone-annotation-card-note'),folderStyle=getComputedStyle(folder);
+          const style=getComputedStyle(card),overflow=[node,node.querySelector('.inkstone-annotation-sidebar-list'),header,...node.querySelectorAll('.inkstone-annotation-card,.inkstone-annotation-card-text,.inkstone-annotation-card-note,.inkstone-annotation-card-actions')].filter(element=>element.scrollWidth>element.clientWidth+1).map(element=>element.className);
+          return{overflow,name:name.textContent,title:source.title,aria:source.getAttribute('aria-label'),nameHeight:name.getBoundingClientRect().height,nameLine:parseFloat(getComputedStyle(name).lineHeight),folder:{height:folder.getBoundingClientRect().height,line:parseFloat(folderStyle.lineHeight),overflow:folderStyle.overflow,ellipsis:folderStyle.textOverflow,whiteSpace:folderStyle.whiteSpace},headingY:title.getBoundingClientRect().top,countY:count.getBoundingClientRect().top,headingFont:parseFloat(getComputedStyle(title).fontSize),quoteFont:parseFloat(getComputedStyle(quote).fontSize),noteFont:parseFloat(getComputedStyle(note).fontSize),borders:[style.borderTopWidth,style.borderLeftWidth,style.borderRightWidth],index:card.querySelector('.inkstone-annotation-card-index').textContent,noteLabel:card.querySelector('.inkstone-annotation-card-note-label').textContent,buttons:[...card.querySelectorAll('button')].map(button=>{const s=getComputedStyle(button),r=button.getBoundingClientRect();return{text:button.textContent,font:parseFloat(s.fontSize),height:r.height,top:r.top,opacity:s.opacity,visibility:s.visibility,background:s.backgroundColor,shadow:s.boxShadow,border:s.borderTopWidth}})};
+        });
+        assert.deepEqual(metrics.overflow,[],`${width}px sidebar should wrap long words without horizontal overflow`);assert.equal(metrics.name,context.basename);assert.equal(metrics.title,context.filePath);assert(metrics.aria.includes(context.filePath));assert(metrics.nameHeight<=metrics.nameLine*2+1);
+        assert(metrics.folder.height<=metrics.folder.line+1);assert.equal(metrics.folder.ellipsis,'ellipsis');assert.equal(metrics.folder.whiteSpace,'nowrap');assert.equal(metrics.folder.overflow,'hidden');
+        assert(Math.abs(metrics.headingY-metrics.countY)<=6,`${width}px heading and count should share a row`);assert(metrics.headingFont<=16);assert(metrics.quoteFont>metrics.noteFont);assert.deepEqual(metrics.borders,['0px','0px','0px']);assert.equal(metrics.index,'01');assert.equal(metrics.noteLabel,'想法');
+        assert.deepEqual(metrics.buttons.map(button=>button.text),['定位原文','编辑','删除']);assert(metrics.buttons.every(button=>button.font<=13&&button.height>=30&&button.height<=36&&Number(button.opacity)>0&&button.visibility==='visible'&&button.shadow==='none'));assert(metrics.buttons.every(button=>Math.abs(button.top-metrics.buttons[0].top)<=1));assert.equal(metrics.buttons[0].border,'1px');assert(metrics.buttons.slice(1).every(button=>button.background==='rgba(0, 0, 0, 0)'),'Secondary card actions should retain a transparent ghost background');
+        const before=await sidebar.locator('.inkstone-annotation-sidebar-header').boundingBox();
+        await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>{node.scrollTop=node.scrollHeight;});
+        const after=await sidebar.locator('.inkstone-annotation-sidebar-header').boundingBox();assert.equal(after.y,before.y);assert.equal(after.height,before.height);
+        assert.equal(await sidebar.evaluate(node=>node.scrollTop),0);assert(await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>node.scrollTop>0));
+      }
+      await sidebarWidth(360);await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>{node.scrollTop=0;});
+      await sidebar.locator('.inkstone-annotation-card').first().getByRole('button',{name:'定位原文',exact:true}).focus();await page.keyboard.press('Tab');
+      const focus=await sidebar.evaluate(node=>{const button=node.ownerDocument.activeElement,s=getComputedStyle(button);return{inside:node.contains(button),visible:button.matches(':focus-visible'),outline:s.outlineStyle,width:parseFloat(s.outlineWidth)}});assert(focus.inside&&focus.visible&&focus.outline!=='none'&&focus.width>=1,'Keyboard focus should remain clearly visible');
+      const cdp=await page.context().newCDPSession(page);
+      try{
+        await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});assert.equal(await page.evaluate(()=>matchMedia('(pointer: coarse)').matches),true);
+        for(const width of [240,360]){await sidebarWidth(width);const controls=await sidebar.locator('button,select').evaluateAll(nodes=>nodes.map(node=>({width:node.getBoundingClientRect().width,height:node.getBoundingClientRect().height,tag:node.tagName})));assert(controls.every(control=>control.height>=44&&(control.tag!=='BUTTON'||control.width>=44)));assert.equal(await sidebar.evaluate(node=>node.scrollWidth>node.clientWidth+1),false);}
+      }finally{await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:false});await cdp.detach();}
+      await sidebarWidth(360);
+    });
+    await run('sidebar-empty-states',async()=>{
+      await fixture('这篇笔记暂时没有标注。\n');await command('show-annotations');
+      const sidebar=page.locator('.inkstone-annotation-sidebar'),filter=sidebar.getByLabel('筛选标注颜色'),exportButton=sidebar.getByRole('button',{name:'导出摘录',exact:true});await filter.selectOption('all');
+      assert((await sidebar.locator('.inkstone-annotation-sidebar-empty').textContent()).includes('暂无标注'));assert.equal(await filter.isEnabled(),true);assert.equal(await exportButton.isDisabled(),true);
+      await fixture('<mark class="inkstone-highlight inkstone-green">唯一绿色观点</mark>\n');await filter.selectOption('blue');
+      assert.equal(await sidebar.locator('.inkstone-annotation-card').count(),0);assert((await sidebar.locator('.inkstone-annotation-sidebar-empty').textContent()).includes('筛选'));assert.equal(await filter.isEnabled(),true);assert.equal(await exportButton.isEnabled(),true);
+      await page.evaluate(async()=>{const leaf=app.workspace.getLeaf(true);await leaf.setViewState({type:'empty',active:true});app.workspace.setActiveLeaf(leaf,{focus:true});});
+      await page.waitForFunction(()=>document.querySelector('.inkstone-annotation-sidebar [aria-label="筛选标注颜色"]')?.disabled===true);
+      assert((await sidebar.locator('.inkstone-annotation-sidebar-empty').textContent()).includes('暂无当前笔记'));assert.equal(await exportButton.isDisabled(),true);assert.equal(await sidebar.locator('.inkstone-annotation-card').count(),0);
+    });
+    await run('sidebar-refresh-scroll-and-stale-actions',async()=>{
+      await longSidebarFixture();await command('show-annotations');
+      const sidebar=page.locator('.inkstone-annotation-sidebar'),filter=sidebar.getByLabel('筛选标注颜色');await filter.selectOption('all');await sidebarWidth(360);
+      const before=await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>{node.scrollTop=Math.min(700,(node.scrollHeight-node.clientHeight)/2);window.__inkstoneQaSidebarList=node;return node.scrollTop;});assert(before>200);
+      await page.evaluate(()=>{const view=app.workspace.getLeaf(false).view;view.editor.setValue(view.editor.getValue()+'\n新增的阅读附记。\n');});
+      await page.waitForFunction(()=>document.querySelector('.inkstone-annotation-sidebar-list')!==window.__inkstoneQaSidebarList);
+      assert(Math.abs(await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>node.scrollTop)-before)<=1,'Refreshing the same note should preserve the list scroll offset');
+      const visibleIndex=await sidebar.evaluate(node=>{const list=node.querySelector('.inkstone-annotation-sidebar-list'),bounds=list.getBoundingClientRect();return[...list.querySelectorAll('.inkstone-annotation-card')].findIndex(card=>{const r=card.getBoundingClientRect();return r.top>=bounds.top&&r.bottom<=bounds.bottom;});});assert(visibleIndex>=0);
+      await sidebar.locator('.inkstone-annotation-card').nth(visibleIndex).getByRole('button',{name:'删除',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.inkstone-annotation-card').length===11);
+      assert(Math.abs(await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>node.scrollTop)-before)<=1,'Deleting within a long list should preserve its scroll offset');
+      await filter.selectOption('blue');assert.equal(await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>node.scrollTop),0,'Changing a filter should start at the first result');await filter.selectOption('all');
+      const current=await data(),updated=current+'\n更新后的内容必须保留。\n';
+      await page.evaluate(updated=>{const stale=document.querySelector('.inkstone-annotation-card-actions button:last-child'),view=app.workspace.getLeaf(false).view;view.setViewData(updated,false);if(view.getViewData()!==updated)throw Error('QA snapshot update failed');stale.click();},updated);
+      assert.equal(await data(),updated,'A detached sidebar action must not write through an old snapshot');
+      await fixture('<u class="inkstone-underline">切换到另一篇笔记</u>\n');assert.equal(await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>node.scrollTop),0);await page.evaluate(()=>{delete window.__inkstoneQaSidebarList;});
     });
     await run('export',async()=>{
       await fixture('<u class="inkstone-underline">需要摘录</u>[^inkstone-2]\n\n[^inkstone-2]: 摘录备注\n');
