@@ -19,6 +19,7 @@ function createAnnotationMenu({ doc, record, onStyle, onSaveNote, onDelete, onCl
   element.append(actions, error);
 
   let draft = record.note || '';
+  let draftStyle = { kind: record.kind, color: record.color };
   let busy = false;
   let disposed = false;
   let focusFrame = null;
@@ -86,28 +87,44 @@ function createAnnotationMenu({ doc, record, onStyle, onSaveNote, onDelete, onCl
     }
   }
 
-  function showActions() {
-    cancelFocus();
-    clearSaveHotkey();
-    actions.replaceChildren();
-    clearError();
+  function styleChoices(currentStyle, choose) {
     const styles = doc.createElement('div');
     styles.className = 'inkstone-annotation-menu-styles';
     styles.setAttribute('role', 'group');
     styles.setAttribute('aria-label', '标注样式');
+    const choices = [];
     for (const [color, label] of COLORS) {
-      const style = button(label, () => perform(() => onStyle({ kind: 'highlight', color })), 'inkstone-toolbar-style');
-      style.setAttribute('aria-pressed', String(record.kind === 'highlight' && record.color === color));
+      const option = { kind: 'highlight', color };
+      const style = button(label, () => choose(option), 'inkstone-toolbar-style');
       const dot = doc.createElement('span');
       dot.className = `inkstone-toolbar-dot inkstone-swatch-${color}`;
       dot.setAttribute('aria-hidden', 'true');
       style.prepend(dot);
       styles.append(style);
+      choices.push({ button: style, option });
     }
-    const underline = button('下划线', () => perform(() => onStyle({ kind: 'underline' })), 'inkstone-toolbar-style inkstone-toolbar-underline');
-    underline.setAttribute('aria-pressed', String(record.kind === 'underline'));
+    const underlineOption = { kind: 'underline' };
+    const underline = button('下划线', () => choose(underlineOption), 'inkstone-toolbar-style inkstone-toolbar-underline');
     styles.append(underline);
-    actions.append(styles);
+    choices.push({ button: underline, option: underlineOption });
+    function update(nextStyle) {
+      for (const choice of choices) {
+        const selected = choice.option.kind === nextStyle.kind
+          && (nextStyle.kind === 'underline' || choice.option.color === nextStyle.color);
+        choice.button.setAttribute('aria-pressed', String(selected));
+      }
+    }
+    update(currentStyle);
+    return { element: styles, update };
+  }
+
+  function showActions() {
+    cancelFocus();
+    clearSaveHotkey();
+    actions.replaceChildren();
+    clearError();
+    const styles = styleChoices(record, option => perform(() => onStyle(option)));
+    actions.append(styles.element);
 
     if (record.note) {
       const preview = doc.createElement('p');
@@ -131,13 +148,17 @@ function createAnnotationMenu({ doc, record, onStyle, onSaveNote, onDelete, onCl
     const quote = doc.createElement('p');
     quote.className = 'inkstone-annotation-menu-quote';
     quote.textContent = record.text || '';
+    const styles = styleChoices(draftStyle, option => {
+      draftStyle = { kind: option.kind, color: option.color ?? null };
+      styles.update(draftStyle);
+    });
     const input = doc.createElement('textarea');
     input.className = 'inkstone-annotation-menu-input';
     input.setAttribute('aria-label', '想法内容');
     input.placeholder = '写下你的想法…';
     input.value = draft;
     input.addEventListener('input', () => { draft = input.value; });
-    const save = () => perform(() => onSaveNote(input.value));
+    const save = () => perform(() => onSaveNote(input.value, { ...draftStyle }));
     input.addEventListener('keydown', event => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && !event.isComposing && !event.defaultPrevented) {
         event.preventDefault();
@@ -160,7 +181,7 @@ function createAnnotationMenu({ doc, record, onStyle, onSaveNote, onDelete, onCl
       }),
       button('保存想法', save),
     );
-    actions.append(quote, input, controls);
+    actions.append(quote, styles.element, input, controls);
     const cleanup = bindSaveHotkey?.(save);
     if (typeof cleanup === 'function') unbindSaveHotkey = cleanup;
     onResize?.();

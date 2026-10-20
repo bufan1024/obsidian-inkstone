@@ -553,9 +553,9 @@ module.exports = class InkstoneAnnotations extends Plugin {
         return () => this.app.keymap.popScope(scope);
       },
       onStyle: options => perform(() => this.commit(capture, options)),
-      onSaveNote: note => perform(() => {
+      onSaveNote: (note, style = record) => perform(() => {
         if (!capture.annotation && !note.trim()) throw new Error('请先写下想法，再保存。');
-        return this.commit(capture, { kind: record.kind, color: record.color, note });
+        return this.commit(capture, { kind: style.kind, color: style.color, note });
       }),
       onDelete: () => perform(() => this.removeAnnotation(capture.annotation.from, capture)),
       onClose: close,

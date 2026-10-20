@@ -69,6 +69,13 @@ const results = [];
       if(active)return current.scope!==saved.scope&&current.prevScopes.length===saved.prevScopes.length+1;
       return current.scope===saved.scope&&current.prevScopes.length===saved.prevScopes.length&&current.prevScopes.every((scope,index)=>scope===saved.prevScopes[index]);
     },active),true,active?'The thought composer should own a temporary keyboard scope':'Closing the thought composer should restore the exact previous keyboard scope');
+    const spyTransactions=()=>page.evaluate(()=>{
+      const editor=app.workspace.getLeaf(false).view.editor,transaction=editor.transaction;
+      window.__inkstoneQaTransaction={editor,transaction,count:0};
+      editor.transaction=function(...args){if(args[1]==='inkstone-annotation')window.__inkstoneQaTransaction.count++;return transaction.apply(this,args);};
+    });
+    const transactionCount=()=>page.evaluate(()=>window.__inkstoneQaTransaction.count);
+    const restoreTransactions=()=>page.evaluate(()=>{const saved=window.__inkstoneQaTransaction;saved.editor.transaction=saved.transaction;delete window.__inkstoneQaTransaction;});
     const existingAnnotation=async(mode='preview',index=0)=>{
       if(mode==='source')await page.evaluate(()=>app.workspace.getLeaf(false).view.editor.setCursor({line:2,ch:0}));
       const selector=mode==='preview'?'.markdown-preview-view :is(mark.inkstone-highlight,u.inkstone-underline)':'.cm-content .inkstone-live-annotation';
@@ -506,23 +513,61 @@ const results = [];
       await assertScope(true);
       return {menu,input};
     };
+    await run('selection-idea-style-draft',async()=>{
+      const original='写想法时，也能选择标注样式。\n',draft='样式与想法应当在保存时一起生效。';
+      const {menu,input}=await setupIdea('source',original,'选择标注样式');
+      assert.equal(await menu.getByRole('button',{name:'蓝色',exact:true}).count(),1,'The thought composer should include annotation style controls');
+      await input.fill(draft);await spyTransactions();
+      await input.evaluate(node=>{window.__inkstoneQaComposerInput=node;});
+      try{
+        for(const label of ['黄色','绿色','蓝色','粉色','下划线','蓝色']) {
+          const style=menu.getByRole('button',{name:label,exact:true});await style.click();
+          assert.equal(await style.getAttribute('aria-pressed'),'true');
+          assert.equal(await menu.locator('[aria-pressed="true"]').count(),1);
+          assert.equal(await input.evaluate(node=>node===window.__inkstoneQaComposerInput),true,'Choosing a style should preserve the existing textarea');
+          assert.equal(await input.inputValue(),draft);assert.equal(await data(),original);assert.equal(await transactionCount(),0,'Draft style changes should not call editor.transaction');
+        }
+        await input.press(process.platform==='darwin'?'Meta+Enter':'Control+Enter');
+        await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));await assertScope(false);
+        const text=await data();assert(text.includes('<mark class="inkstone-highlight inkstone-blue">选择标注样式</mark>[^inkstone-'));assert(text.includes(draft));assert.equal(await transactionCount(),1,'Saving the style and thought should use one transaction');
+      }finally{await restoreTransactions();await page.evaluate(()=>{delete window.__inkstoneQaComposerInput;});}
+    });
+    await run('existing-composer-style-draft',async()=>{
+      const original='<mark class="inkstone-highlight inkstone-green">已有想法观点</mark>[^inkstone-1]\n\n[^inkstone-1]: 原有想法\n';
+      await fixture(original,'preview');await rememberScope();await (await existingAnnotation()).click();
+      const menu=page.locator('.inkstone-annotation-menu');await menu.getByRole('button',{name:'编辑想法',exact:true}).click();
+      const input=menu.getByRole('textbox',{name:'想法内容',exact:true});
+      assert.equal(await menu.getByRole('button',{name:'绿色',exact:true}).getAttribute('aria-pressed'),'true');assert.equal(await input.inputValue(),'原有想法');
+      await spyTransactions();
+      try{
+        const draft='尚未保存的想法和样式';await input.fill(draft);await menu.getByRole('button',{name:'粉色',exact:true}).click();
+        assert.equal(await data(),original);assert.equal(await transactionCount(),0);
+        await menu.getByRole('button',{name:'取消',exact:true}).click();await assertScope(false);
+        assert.equal(await data(),original);assert.equal(await transactionCount(),0);assert.equal(await menu.getByRole('button',{name:'绿色',exact:true}).getAttribute('aria-pressed'),'true','The parent menu should still show the actual stored style');
+        await menu.getByRole('button',{name:'编辑想法',exact:true}).click();await assertScope(true);
+        assert.equal(await input.inputValue(),draft);assert.equal(await menu.getByRole('button',{name:'粉色',exact:true}).getAttribute('aria-pressed'),'true');
+        await menu.getByRole('button',{name:'下划线',exact:true}).click();await input.fill('修改样式与想法同时保存');
+        assert.equal(await data(),original);assert.equal(await transactionCount(),0);
+        await menu.getByRole('button',{name:'保存想法',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));await assertScope(false);
+        const text=await data();assert(text.includes('<u class="inkstone-underline">已有想法观点</u>[^inkstone-1]'));assert(text.includes('[^inkstone-1]: 修改样式与想法同时保存'));assert(!text.includes('inkstone-green'));assert.equal(await transactionCount(),1);
+        await (await existingAnnotation()).click();await menu.getByRole('button',{name:'编辑想法',exact:true}).click();
+        assert.equal(await menu.getByRole('button',{name:'下划线',exact:true}).getAttribute('aria-pressed'),'true');assert.equal(await input.inputValue(),'修改样式与想法同时保存');
+        await input.press('Escape');await assertScope(false);assert.equal(await data(),text);assert.equal(await transactionCount(),1);
+      }finally{await restoreTransactions();}
+    });
     await run('selection-idea-modes-and-single-write',async()=>{
       for(const mode of ['preview','live-preview','source']) {
         const original='前文，选择的句子。后文。\n\n其他正文。\n';
         const {menu,input}=await setupIdea(mode,original,'选择的句子');assert.equal(await data(),original);
-        await page.evaluate(()=>{
-          const editor=app.workspace.getLeaf(false).view.editor,transaction=editor.transaction;
-          window.__inkstoneQaTransaction={editor,transaction,count:0};
-          editor.transaction=function(...args){if(args[1]==='inkstone-annotation')window.__inkstoneQaTransaction.count++;return transaction.apply(this,args);};
-        });
+        await spyTransactions();
         try{
           await input.fill('来自'+mode+'的想法');await input.press(process.platform==='darwin'?'Meta+Enter':'Control+Enter');
           await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));await assertScope(false);
           const text=await data();assert(text.includes('前文，<u class="inkstone-underline">选择的句子</u>[^inkstone-'));assert(text.includes('。后文。'));assert(text.includes('来自'+mode+'的想法'));
-          assert.equal(await page.evaluate(()=>window.__inkstoneQaTransaction.count),1,mode+' saving should create one annotation transaction');
+          assert.equal(await transactionCount(),1,mode+' saving should create one annotation transaction');
           assert.equal(await menu.count(),0);
         }finally{
-          await page.evaluate(()=>{const saved=window.__inkstoneQaTransaction;saved.editor.transaction=saved.transaction;delete window.__inkstoneQaTransaction;});
+          await restoreTransactions();
         }
       }
     });
@@ -549,6 +594,7 @@ const results = [];
         const original='修改后的正文应拒绝旧选区写入。\n';
         const {menu,input}=await setupIdea(mode,original,'旧选区');
         const draft='过期时保留这段草稿';await input.fill(draft);
+        await menu.getByRole('button',{name:'粉色',exact:true}).click();assert.equal(await data(),original);
         const updated=original+'另一次编辑新增的内容。\n';
         await page.evaluate(updated=>{
           const button=document.querySelector('.inkstone-annotation-menu [aria-label="保存想法"]'),view=app.workspace.getLeaf(false).view;
@@ -558,23 +604,25 @@ const results = [];
         assert.equal(await data(),updated);
         if(await menu.count()) {
           assert.equal(await input.inputValue(),draft);assert.equal(await input.isEnabled(),true);assert.equal(await menu.getByRole('button',{name:'保存想法',exact:true}).isEnabled(),true);
+          assert.equal(await menu.getByRole('button',{name:'粉色',exact:true}).getAttribute('aria-pressed'),'true');
           await input.press('Escape');
         }
         await assertScope(false);
       }
       const original='写入失败时，应当保留这段草稿。\n',draft='保存失败后，可以继续编辑并重试。';
-      const {menu,input}=await setupIdea('source',original,'保留这段草稿');await input.fill(draft);
+      const {menu,input}=await setupIdea('source',original,'保留这段草稿');await input.fill(draft);await menu.getByRole('button',{name:'蓝色',exact:true}).click();assert.equal(await data(),original);
       await page.evaluate(()=>{const editor=app.workspace.getLeaf(false).view.editor;window.__inkstoneQaFailedTransaction={editor,transaction:editor.transaction};editor.transaction=()=>{throw Error('QA: simulated editor write failure');};});
       try{
         await menu.getByRole('button',{name:'保存想法',exact:true}).click();
         await menu.locator('.inkstone-annotation-menu-error').waitFor();
         assert.equal(await data(),original);assert.equal(await input.inputValue(),draft);assert.equal(await input.isEnabled(),true);assert.equal(await menu.getByRole('button',{name:'保存想法',exact:true}).isEnabled(),true);
+        assert.equal(await menu.getByRole('button',{name:'蓝色',exact:true}).getAttribute('aria-pressed'),'true');
       }finally{
         await page.evaluate(()=>{const saved=window.__inkstoneQaFailedTransaction;saved.editor.transaction=saved.transaction;delete window.__inkstoneQaFailedTransaction;});
       }
       await menu.getByRole('button',{name:'保存想法',exact:true}).click();
       await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));await assertScope(false);
-      assert((await data()).includes(draft));
+      assert((await data()).includes(draft));assert((await data()).includes('<mark class="inkstone-highlight inkstone-blue">保留这段草稿</mark>'));
     });
     await run('selection-idea-narrow-layout',async()=>{
       await page.evaluate(()=>{app.workspace.leftSplit.collapse();app.workspace.rightSplit.collapse();});await page.setViewportSize({width:390,height:844});
@@ -582,6 +630,9 @@ const results = [];
         const original='窄屏选中文字之后，也能在句子旁写想法。\n';
         const {menu,input}=await setupIdea('preview',original,'在句子旁写想法');
         await input.fill(Array.from({length:30},(_,index)=>`第${index+1}行草稿`).join('\n'));
+        for(const label of ['黄色','绿色','蓝色','粉色','下划线'])assert.equal(await menu.getByRole('button',{name:label,exact:true}).isVisible(),true);
+        const colors=await menu.locator('.inkstone-toolbar-dot').evaluateAll(nodes=>nodes.map(node=>getComputedStyle(node).backgroundColor));assert.equal(colors.length,4);assert.equal(new Set(colors).size,4);assert(colors.every(color=>!['rgb(255, 255, 255)','rgba(0, 0, 0, 0)'].includes(color)));
+        await menu.getByRole('button',{name:'蓝色',exact:true}).click();assert.equal(await menu.getByRole('button',{name:'蓝色',exact:true}).getAttribute('aria-pressed'),'true');
         const box=await menu.boundingBox();assert(box.x>=0&&box.x+box.width<=390);assert(box.y>=0&&box.y+box.height<=844);
         const size=await menu.evaluate(node=>({width:node.clientWidth,scroll:node.scrollWidth}));assert(size.scroll<=size.width+1);
         await input.dispatchEvent('scroll');assert.equal(await menu.count(),1);assert.equal(await data(),original);

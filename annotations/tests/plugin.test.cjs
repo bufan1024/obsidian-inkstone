@@ -311,3 +311,49 @@ test('a selection inside a legacy highlight keeps its existing style when saving
   assert.equal(updated.color,null);
   assert.equal(updated.note,'保留原来的样式');
 });
+
+test('a selection idea saves the chosen style and note together in one write', async () => {
+  for (const style of [{kind:'underline'}, ...['yellow','green','blue','rose'].map(color=>({kind:'highlight',color}))]) {
+    const fixture=pluginFixture('首段，选中的文字，末段。'), options=fixture.openIdea(3,8);
+    const writes=[];
+    let result;
+    fixture.plugin.commit=async(capture,changes)=>{
+      writes.push(changes);
+      result=core.applyChanges(capture.snapshot,core.buildAnnotationPlan({document:capture.snapshot,from:capture.from,to:capture.to,...changes}).changes);
+    };
+    await options.onSaveNote('跟着所选样式一起保存',style);
+    assert.equal(writes.length,1);
+    const updated=core.parseAnnotations(result)[0];
+    assert.equal(updated.kind,style.kind);
+    assert.equal(updated.color,style.color || null);
+    assert.equal(updated.text,'选中的文字');
+    assert.equal(updated.note,'跟着所选样式一起保存');
+  }
+});
+
+test('an existing annotation idea saves its chosen style and note as one edit', async () => {
+  const fixture=pluginFixture('<mark class="inkstone-highlight inkstone-green">原有观点</mark>[^inkstone-1]\n\n[^inkstone-1]: 原有想法');
+  const annotation=core.parseAnnotations(fixture.view.getViewData())[0];
+  const options=fixture.openIdea(annotation.contentFrom,annotation.contentTo);
+  const writes=[];
+  let result;
+  fixture.plugin.commit=async(capture,changes)=>{
+    writes.push(changes);
+    result=core.applyChanges(capture.snapshot,core.buildEditAnnotationPlan({document:capture.snapshot,from:capture.annotation.from,...changes}).changes);
+  };
+  await options.onSaveNote('配合新颜色的想法',{kind:'highlight',color:'rose'});
+  assert.equal(writes.length,1);
+  const records=core.parseAnnotations(result);
+  assert.equal(records.length,1);
+  assert.equal(records[0].color,'rose');
+  assert.equal(records[0].note,'配合新颜色的想法');
+});
+
+test('a stale idea refuses the chosen style and note together', async () => {
+  const fixture=pluginFixture('先读再想'),options=fixture.openIdea(),writes=[];
+  fixture.plugin.commit=async()=>writes.push('commit');
+  fixture.setText('原文被别人改过');
+  await assert.rejects(()=>options.onSaveNote('新想法',{kind:'highlight',color:'blue'}),/变化/);
+  assert.deepEqual(writes,[]);
+  assert.equal(fixture.view.getViewData(),'原文被别人改过');
+});
