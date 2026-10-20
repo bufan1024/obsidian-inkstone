@@ -463,14 +463,130 @@ const results = [];
       await page.waitForFunction(()=>app.workspace.getLeaf(false).view.getViewData().includes('inkstone-blue">沿用最近的样式</mark>'));
     });
     await run('toolbar-note-preserves-style',async()=>{
-      await fixture('<mark class="inkstone-highlight inkstone-green">保留绿色观点</mark>\n');await selectEditorText('保留绿色观点');
-      await page.locator('.inkstone-selection-toolbar').getByRole('button',{name:'写想法',exact:true}).click();
-      const note=page.locator('textarea[aria-label="备注内容"]');await note.waitFor();
-      assert.equal(await page.getByRole('button',{name:'绿色',exact:true}).getAttribute('aria-pressed'),'true');
-      await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='备注内容',{}, {timeout:1500});
-      await note.fill('只补充想法，保留原有绿色。');await page.getByRole('button',{name:'保存标注',exact:true}).click();
-      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-modal'));
-      const text=await data();assert(text.includes('<mark class="inkstone-highlight inkstone-green">保留绿色观点</mark>'));assert(text.includes('只补充想法，保留原有绿色。'));assert(!text.includes('inkstone-underline'));
+      for(const [color,label] of [['green','保留绿色观点'],[null,'保留旧式观点']]) {
+        const mark=`<mark class="inkstone-highlight${color?' inkstone-'+color:''}">${label}</mark>`;
+        const original=mark+'[^inkstone-1]\n\n[^inkstone-1]: 原有想法\n';
+        await fixture(original);await selectEditorText(label);await rememberScope();
+        await page.locator('.inkstone-selection-toolbar').getByRole('button',{name:'写想法',exact:true}).click();
+        assert.equal(await page.locator('.inkstone-annotation-modal').count(),0,'Selection toolbar thoughts should open the compact composer directly');
+        const menu=page.locator('.inkstone-annotation-menu'),note=menu.getByRole('textbox',{name:'想法内容',exact:true});await note.waitFor();
+        assert.equal(await menu.locator('.inkstone-annotation-menu-quote').textContent(),label);
+        assert.equal(await note.inputValue(),'原有想法');assert.equal(await data(),original);
+        await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='想法内容',{}, {timeout:1500});
+        await assertScope(true);
+        await note.fill('只补充想法，保留原有样式。');await menu.getByRole('button',{name:'保存想法',exact:true}).click();
+        await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));await assertScope(false);
+        const text=await data();assert(text.includes(mark));assert(text.includes('只补充想法，保留原有样式。'));assert(!text.includes('inkstone-underline'));
+      }
+    });
+    const setupIdea=async(mode,text,needle)=>{
+      await fixture(text,mode==='preview'?'preview':'source');
+      if(mode==='source') {
+        await page.evaluate(async()=>{const leaf=app.workspace.getLeaf(false),state=leaf.getViewState();await leaf.setViewState({...state,state:{...state.state,source:true}});});
+        await page.waitForFunction(()=>!app.workspace.getLeaf(false).view.contentEl.querySelector('.markdown-source-view.is-live-preview'));
+      }
+      if(mode==='preview') {
+        await page.evaluate(needle=>{
+          const paragraph=app.workspace.getLeaf(false).view.contentEl.querySelector('.markdown-preview-view p'),walker=document.createTreeWalker(paragraph,4);let node;
+          while((node=walker.nextNode())) {
+            const at=node.nodeValue.indexOf(needle);if(at<0)continue;
+            const range=document.createRange();range.setStart(node,at);range.setEnd(node,at+needle.length);
+            const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);return;
+          }
+          throw Error('Visible selection missing: '+needle);
+        },needle);
+        await page.locator('.inkstone-selection-toolbar:not(.inkstone-annotation-menu)').waitFor();
+      }else await selectEditorText(needle);
+      await rememberScope();
+      await page.locator('.inkstone-selection-toolbar:not(.inkstone-annotation-menu)').getByRole('button',{name:'写想法',exact:true}).click();
+      const menu=page.locator('.inkstone-annotation-menu'),input=menu.getByRole('textbox',{name:'想法内容',exact:true});await input.waitFor();
+      assert.equal(await page.locator('.inkstone-annotation-modal').count(),0);
+      assert.equal(await menu.locator('.inkstone-annotation-menu-quote').textContent(),needle);
+      await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='想法内容');
+      await assertScope(true);
+      return {menu,input};
+    };
+    await run('selection-idea-modes-and-single-write',async()=>{
+      for(const mode of ['preview','live-preview','source']) {
+        const original='前文，选择的句子。后文。\n\n其他正文。\n';
+        const {menu,input}=await setupIdea(mode,original,'选择的句子');assert.equal(await data(),original);
+        await page.evaluate(()=>{
+          const editor=app.workspace.getLeaf(false).view.editor,transaction=editor.transaction;
+          window.__inkstoneQaTransaction={editor,transaction,count:0};
+          editor.transaction=function(...args){if(args[1]==='inkstone-annotation')window.__inkstoneQaTransaction.count++;return transaction.apply(this,args);};
+        });
+        try{
+          await input.fill('来自'+mode+'的想法');await input.press(process.platform==='darwin'?'Meta+Enter':'Control+Enter');
+          await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));await assertScope(false);
+          const text=await data();assert(text.includes('前文，<u class="inkstone-underline">选择的句子</u>[^inkstone-'));assert(text.includes('。后文。'));assert(text.includes('来自'+mode+'的想法'));
+          assert.equal(await page.evaluate(()=>window.__inkstoneQaTransaction.count),1,mode+' saving should create one annotation transaction');
+          assert.equal(await menu.count(),0);
+        }finally{
+          await page.evaluate(()=>{const saved=window.__inkstoneQaTransaction;saved.editor.transaction=saved.transaction;delete window.__inkstoneQaTransaction;});
+        }
+      }
+    });
+    await run('selection-idea-dismissals-and-empty',async()=>{
+      for(const [mode,action] of [['preview','cancel'],['live-preview','escape'],['source','outside'],['preview','empty']]) {
+        const original='未保存的想法不应提前改动这段文字。\n';
+        const {menu,input}=await setupIdea(mode,original,'这段文字');
+        await input.fill(action==='empty'?'   \n   ':'还没有保存的草稿');
+        assert.equal(await data(),original);
+        if(action==='cancel')await menu.getByRole('button',{name:'取消',exact:true}).click();
+        if(action==='escape')await input.press('Escape');
+        if(action==='outside')await page.mouse.click(25,25);
+        if(action==='empty') {
+          await menu.getByRole('button',{name:'保存想法',exact:true}).click();
+          assert.equal(await data(),original,'A blank new thought should not insert an empty annotation');
+          await page.keyboard.press('Escape');
+        }
+        await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));await assertScope(false);
+        assert.equal(await data(),original);assert.equal(await page.locator('.inkstone-annotation-modal').count(),0);
+      }
+    });
+    await run('selection-idea-stale-draft-protection',async()=>{
+      for(const mode of ['preview','source']) {
+        const original='修改后的正文应拒绝旧选区写入。\n';
+        const {menu,input}=await setupIdea(mode,original,'旧选区');
+        const draft='过期时保留这段草稿';await input.fill(draft);
+        const updated=original+'另一次编辑新增的内容。\n';
+        await page.evaluate(updated=>{
+          const button=document.querySelector('.inkstone-annotation-menu [aria-label="保存想法"]'),view=app.workspace.getLeaf(false).view;
+          view.setViewData(updated,false);if(view.getViewData()!==updated)throw Error('QA snapshot mutation failed');button.click();
+        },updated);
+        await page.waitForFunction(()=>document.querySelector('.inkstone-annotation-menu-error')?.textContent||!document.querySelector('.inkstone-annotation-menu'));
+        assert.equal(await data(),updated);
+        if(await menu.count()) {
+          assert.equal(await input.inputValue(),draft);assert.equal(await input.isEnabled(),true);assert.equal(await menu.getByRole('button',{name:'保存想法',exact:true}).isEnabled(),true);
+          await input.press('Escape');
+        }
+        await assertScope(false);
+      }
+      const original='写入失败时，应当保留这段草稿。\n',draft='保存失败后，可以继续编辑并重试。';
+      const {menu,input}=await setupIdea('source',original,'保留这段草稿');await input.fill(draft);
+      await page.evaluate(()=>{const editor=app.workspace.getLeaf(false).view.editor;window.__inkstoneQaFailedTransaction={editor,transaction:editor.transaction};editor.transaction=()=>{throw Error('QA: simulated editor write failure');};});
+      try{
+        await menu.getByRole('button',{name:'保存想法',exact:true}).click();
+        await menu.locator('.inkstone-annotation-menu-error').waitFor();
+        assert.equal(await data(),original);assert.equal(await input.inputValue(),draft);assert.equal(await input.isEnabled(),true);assert.equal(await menu.getByRole('button',{name:'保存想法',exact:true}).isEnabled(),true);
+      }finally{
+        await page.evaluate(()=>{const saved=window.__inkstoneQaFailedTransaction;saved.editor.transaction=saved.transaction;delete window.__inkstoneQaFailedTransaction;});
+      }
+      await menu.getByRole('button',{name:'保存想法',exact:true}).click();
+      await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));await assertScope(false);
+      assert((await data()).includes(draft));
+    });
+    await run('selection-idea-narrow-layout',async()=>{
+      await page.evaluate(()=>{app.workspace.leftSplit.collapse();app.workspace.rightSplit.collapse();});await page.setViewportSize({width:390,height:844});
+      try{
+        const original='窄屏选中文字之后，也能在句子旁写想法。\n';
+        const {menu,input}=await setupIdea('preview',original,'在句子旁写想法');
+        await input.fill(Array.from({length:30},(_,index)=>`第${index+1}行草稿`).join('\n'));
+        const box=await menu.boundingBox();assert(box.x>=0&&box.x+box.width<=390);assert(box.y>=0&&box.y+box.height<=844);
+        const size=await menu.evaluate(node=>({width:node.clientWidth,scroll:node.scrollWidth}));assert(size.scroll<=size.width+1);
+        await input.dispatchEvent('scroll');assert.equal(await menu.count(),1);assert.equal(await data(),original);
+        await input.press('Escape');await assertScope(false);
+      }finally{await page.setViewportSize({width:1440,height:1000});}
     });
     await run('toolbar-copy-with-isolated-clipboard',async()=>{
       const original='只复制当前选择，正文保持原样。\n';await fixture(original);await selectEditorText('当前选择');

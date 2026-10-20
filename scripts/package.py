@@ -31,6 +31,7 @@ THEME_FILES = (
     "preview-reading-settings.png",
     "preview-toolbar.png",
     "preview-annotation-menu.png",
+    "preview-selection-idea.png",
     "examples/阅读与排版示例.md",
     "examples/划线与备注示例.md",
 )
@@ -138,7 +139,7 @@ python3 scripts/install.py --vault "/你的笔记库路径" --update --theme-onl
 
 将 `themes/Inkstone` 复制到笔记库的 `.obsidian/themes/`，将 `plugins/inkstone-annotations` 复制到 `.obsidian/plugins/`。重新打开 Obsidian 后，在「设置 → 外观」选择 Inkstone 和浅色配色，并手动启用插件。使用自定义配置文件夹时，将 `.obsidian` 替换为实际文件夹名。
 
-将 [划线与备注示例](examples/划线与备注示例.md) 复制到笔记库可体验彩色高亮、灰阶线型和脚注备注。点击已有标记，在原文旁的小菜单中改颜色、写想法或删除标注；侧栏「编辑」仍提供完整面板。
+将 [划线与备注示例](examples/划线与备注示例.md) 复制到笔记库可体验彩色高亮、灰阶线型和脚注备注。选中文字后点「写想法」，直接在原文旁的小浮层中输入并保存；点击已有标记，可在小菜单中改颜色、编辑想法或删除标注。侧栏「编辑」和综合编辑命令仍提供完整面板。
 """.encode("utf-8")
 
 

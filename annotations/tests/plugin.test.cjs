@@ -37,7 +37,15 @@ function pluginFixture(text = '<u class="inkstone-underline">宿主原文</u>') 
     assert.equal(builtMenus.length, 1);
     return builtMenus[0];
   };
-  return {plugin, view, node, render, click, calls, notices, openedModals, openMenu, setText: value => { text = value; }};
+  const openIdea = (from = 0, to = text.length) => {
+    plugin.positionToolbar = () => {};
+    const context = plugin.getAnnotationContext();
+    const annotation = context.records.find(record => from >= record.contentFrom && to <= record.contentTo);
+    plugin.showSelectionIdea({...context,editor:view.editor,from,to,annotation,reading:false}, {}, text.slice(from,to));
+    assert.equal(builtMenus.length, 1);
+    return builtMenus[0];
+  };
+  return {plugin, view, node, render, click, calls, notices, openedModals, openMenu, openIdea, setText: value => { text = value; }};
 }
 
 test('clicking an annotation embedded from another note never edits the host note', () => {
@@ -247,4 +255,59 @@ test('a reused reading paragraph receives the committed footnote snapshot only f
   assert.throws(() => plugin.readingAnnotationContext(node, view), /更新/);
   plugin.readingRefreshes.set(view, {filePath:'host.md',before:after,after:before});
   assert.equal(plugin.readingAnnotationContext(node, view).snapshot, before);
+});
+
+test('selection ideas open directly in the small composer and add one underline with a footnote', async () => {
+  const fixture = pluginFixture('首段，选中的文字，末段。');
+  const options = fixture.openIdea(3,8);
+  assert.equal(options.startComposer, true);
+  assert.equal(options.record.text, '选中的文字');
+  assert.equal(fixture.openedModals.length, 0);
+  let result;
+  fixture.plugin.commit = async (capture, changes) => {
+    result = core.applyChanges(capture.snapshot, core.buildAnnotationPlan({document:capture.snapshot,from:capture.from,to:capture.to,...changes}).changes);
+  };
+  await options.onSaveNote('可以试一试');
+  const records = core.parseAnnotations(result);
+  assert.equal(records.length,1);
+  assert.equal(records[0].kind,'underline');
+  assert.equal(records[0].text,'选中的文字');
+  assert.equal(records[0].note,'可以试一试');
+  assert(result.startsWith('首段，'));
+  assert(result.includes('，末段。'));
+});
+
+test('a new selection idea rejects empty input and cancel never writes a mark', async () => {
+  const fixture = pluginFixture('先读再想'), options = fixture.openIdea(), writes=[];
+  fixture.plugin.commit = async () => writes.push('commit');
+  await assert.rejects(() => options.onSaveNote(' \n '),/想法/);
+  assert.deepEqual(writes,[]);
+  assert.equal(fixture.plugin.toolbars.size,1);
+  options.onCancel();
+  assert.deepEqual(writes,[]);
+  assert.equal(fixture.plugin.toolbars.size,0);
+  assert.equal(fixture.view.getViewData(),'先读再想');
+});
+
+test('a selection idea refuses an updated snapshot before a write helper runs', async () => {
+  const fixture=pluginFixture('先读再想'), options=fixture.openIdea(), writes=[];
+  fixture.plugin.commit=async()=>writes.push('commit');
+  fixture.setText('另一人已经修改原文');
+  await assert.rejects(()=>options.onSaveNote('不能写回旧位置'),/变化/);
+  assert.deepEqual(writes,[]);
+});
+
+test('a selection inside a legacy highlight keeps its existing style when saving an idea', async () => {
+  const fixture=pluginFixture('<mark class="inkstone-highlight">已有观点</mark>');
+  const annotation=core.parseAnnotations(fixture.view.getViewData())[0];
+  const options=fixture.openIdea(annotation.contentFrom,annotation.contentTo);
+  let result;
+  fixture.plugin.commit=async(capture,changes)=>{
+    result=core.applyChanges(capture.snapshot,core.buildEditAnnotationPlan({document:capture.snapshot,from:capture.annotation.from,...changes}).changes);
+  };
+  await options.onSaveNote('保留原来的样式');
+  const updated=core.parseAnnotations(result)[0];
+  assert.equal(updated.kind,'highlight');
+  assert.equal(updated.color,null);
+  assert.equal(updated.note,'保留原来的样式');
 });

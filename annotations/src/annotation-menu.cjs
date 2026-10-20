@@ -5,7 +5,7 @@ const COLORS = [
   ['rose', '粉色'],
 ];
 
-function createAnnotationMenu({ doc, record, onStyle, onSaveNote, onDelete, onClose, onResize, bindSaveHotkey }) {
+function createAnnotationMenu({ doc, record, onStyle, onSaveNote, onDelete, onClose, onCancel, onResize, bindSaveHotkey, startComposer = false }) {
   const element = doc.createElement('div');
   element.className = 'inkstone-selection-toolbar inkstone-annotation-menu';
   element.setAttribute('role', 'dialog');
@@ -147,7 +147,17 @@ function createAnnotationMenu({ doc, record, onStyle, onSaveNote, onDelete, onCl
     const controls = doc.createElement('div');
     controls.className = 'inkstone-annotation-menu-actions inkstone-annotation-menu-composer-actions';
     controls.append(
-      button('取消', () => { draft = input.value; showActions(); onResize?.(); }),
+      button('取消', () => {
+        draft = input.value;
+        if (startComposer) {
+          cancelFocus();
+          clearSaveHotkey();
+          (onCancel || onClose)?.();
+        } else {
+          showActions();
+          onResize?.();
+        }
+      }),
       button('保存想法', save),
     );
     actions.append(quote, input, controls);
@@ -169,7 +179,8 @@ function createAnnotationMenu({ doc, record, onStyle, onSaveNote, onDelete, onCl
     cancelFocus();
     clearSaveHotkey();
   };
-  showActions();
+  if (startComposer) showComposer();
+  else showActions();
   return element;
 }
 
