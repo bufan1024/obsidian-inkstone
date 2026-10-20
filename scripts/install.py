@@ -76,7 +76,9 @@ def setting_bytes(config, relative, updates):
     return previous, (json.dumps(settings, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 
 
-def create_plan(vault, config_dir=".obsidian", theme_only=False):
+def create_plan(vault, config_dir=".obsidian", theme_only=False, *, update=False, plugin_only=False):
+    if theme_only and plugin_only:
+        raise InstallError("--theme-only 与 --plugin-only 不能同时使用。")
     if not config_dir or config_dir in (".", "..") or any(char in config_dir for char in "/\\:"):
         raise InstallError("--config-dir 必须是单个相对文件夹名，例如 .obsidian。")
     vault = Path(vault).expanduser()
@@ -96,7 +98,9 @@ def create_plan(vault, config_dir=".obsidian", theme_only=False):
     kit_theme = ROOT / "themes/Inkstone"
     theme_source = kit_theme if kit_theme.is_dir() else ROOT
     plugin_source = ROOT / "plugins/inkstone-annotations" if kit_theme.is_dir() else ROOT / "annotations"
-    files = [(theme_source / name, Path("themes/Inkstone") / name) for name in ("theme.css", "manifest.json")]
+    files = []
+    if not plugin_only:
+        files += [(theme_source / name, Path("themes/Inkstone") / name) for name in ("theme.css", "manifest.json")]
     if not theme_only:
         files += [(plugin_source / name, Path("plugins/inkstone-annotations") / name)
                   for name in ("main.js", "styles.css", "manifest.json")]
@@ -106,13 +110,16 @@ def create_plan(vault, config_dir=".obsidian", theme_only=False):
         if not source.is_file():
             raise InstallError("安装源文件缺失：{}。请使用完整源码或安装合集。".format(source))
         desired.append(Change(relative, source.read_bytes(), read_existing(config, relative)))
-    # Validate both JSON files before creating even a target directory.
-    for relative, updates in (
-        (Path("appearance.json"), {"cssTheme": "Inkstone", "theme": "moonstone"}),
-        (Path("app.json"), {"readableLineLength": True}),
-    ):
-        previous, content = setting_bytes(config, relative, updates)
-        desired.append(Change(relative, content, previous))
+    # Updates and plugin-only installs leave preferences entirely untouched,
+    # including unrelated JSON that cannot be parsed. Full installs validate
+    # both settings files before creating even a target directory.
+    if not update and not plugin_only:
+        for relative, updates in (
+            (Path("appearance.json"), {"cssTheme": "Inkstone", "theme": "moonstone"}),
+            (Path("app.json"), {"readableLineLength": True}),
+        ):
+            previous, content = setting_bytes(config, relative, updates)
+            desired.append(Change(relative, content, previous))
 
     changes = [change for change in desired if change.previous != change.content]
     if any(change.previous is not None for change in changes):
@@ -158,24 +165,28 @@ def apply_plan(plan):
     return plan.config / backup if backup is not None else None
 
 
-def install(vault, config_dir=".obsidian", theme_only=False, dry_run=False):
-    plan = create_plan(vault, config_dir, theme_only)
+def install(vault, config_dir=".obsidian", theme_only=False, dry_run=False, *, update=False, plugin_only=False):
+    plan = create_plan(vault, config_dir, theme_only, update=update, plugin_only=plugin_only)
+    action = "更新" if update else "安装"
+    scope = "文件" if update or plugin_only else "文件与设置"
     if dry_run:
-        print("安装预览（未写入任何文件）：{}".format(plan.config))
+        print("{}预览（未写入任何文件）：{}".format(action, plan.config))
         for change in plan.changes:
             print("  {} {}".format("更新并备份" if change.previous is not None else "新增", change.relative))
         if not plan.changes:
-            print("文件与设置已是最新，无需修改。")
+            print("{}已是最新，无需修改。".format(scope))
         return len(plan.changes)
 
     backup = apply_plan(plan)
     if plan.changes:
-        print("安装完成，已更新 {} 个文件：{}".format(len(plan.changes), plan.config))
+        print("{}完成，已更新 {} 个文件：{}".format(action, len(plan.changes), plan.config))
     else:
-        print("文件与设置已是最新，无需修改。")
+        print("{}已是最新，无需修改。".format(scope))
     if backup is not None:
         print("原文件备份：{}".format(backup))
-    print("请关闭并重启 Obsidian，使主题和设置生效；建议运行脚本前先关闭 Obsidian，避免设置被覆盖。")
+    print("请关闭并重启 Obsidian，使{}生效；建议运行脚本前先关闭 Obsidian，避免文件被覆盖。".format(scope))
+    if update or plugin_only:
+        print("已保留当前主题、配色和行宽偏好；未修改 appearance.json 或 app.json。")
     if not theme_only:
         print("首次安装还需在「设置 → 第三方插件」手动关闭受限模式，并启用「墨读标注 Inkstone Annotations」。")
         print("脚本不会修改已启用的插件列表或受限模式，也不会改动笔记、插件 data.json 或其他文件。")
@@ -183,16 +194,19 @@ def install(vault, config_dir=".obsidian", theme_only=False, dry_run=False):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="安装墨读主题和可选标注插件（不联网）。请先关闭 Obsidian。")
+    parser = argparse.ArgumentParser(description="安装或更新墨读主题和标注插件（不联网）。请先关闭 Obsidian。")
     parser.add_argument("--vault", required=True, help="已用 Obsidian 打开过的笔记库绝对路径")
     parser.add_argument("--config-dir", default=".obsidian", help="配置文件夹名，默认 .obsidian")
-    parser.add_argument("--theme-only", action="store_true", help="只安装主题")
+    parser.add_argument("--update", action="store_true", help="只更新运行文件，保留主题、配色和行宽偏好")
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument("--theme-only", action="store_true", help="只处理主题；可与 --update 配合")
+    scope.add_argument("--plugin-only", action="store_true", help="只处理插件的三个运行文件，不修改主题或阅读偏好；可与 --update 配合")
     parser.add_argument("--dry-run", action="store_true", help="校验并列出变更，不写入文件")
     args = parser.parse_args(argv)
     try:
-        install(args.vault, args.config_dir, args.theme_only, args.dry_run)
+        install(args.vault, args.config_dir, args.theme_only, args.dry_run, update=args.update, plugin_only=args.plugin_only)
     except (InstallError, OSError) as exc:
-        print("安装未完成：{}".format(exc), file=sys.stderr)
+        print("{}未完成：{}".format("更新" if args.update else "安装", exc), file=sys.stderr)
         return 1
     return 0
 

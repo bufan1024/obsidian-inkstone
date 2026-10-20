@@ -37,6 +37,40 @@
 .inkstone-annotation-modal .setting-item:has(textarea) .setting-item-control { margin-top: 12px; }
 .inkstone-annotation-modal textarea { width: 100%; min-height: 112px; font-size: 14px; line-height: 1.6; resize: vertical; }
 .inkstone-annotation-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-.inkstone-annotation-actions button { min-height: 40px; }
+.inkstone-annotation-actions button { min-height: 44px; }
 .inkstone-annotation-error { color: var(--text-error); font-size: 13px; line-height: 1.5; }
 .inkstone-annotation-error:not(:empty) { border-inline-start: 2px solid currentColor; padding: 8px 12px; }
+
+.inkstone-live-annotation,
+.markdown-rendered [data-inkstone-from] { cursor: pointer; }
+.inkstone-live-annotation:focus-visible,
+.markdown-rendered [data-inkstone-from]:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.inkstone-remove-annotation { margin-inline-end: auto; }
+.inkstone-annotation-actions { flex-wrap: wrap; }
+.inkstone-annotation-sidebar { padding: 16px; overflow-y: auto; }
+.inkstone-annotation-sidebar h2 { margin-block: 0 12px; font-size: 18px; }
+.inkstone-annotation-sidebar-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-block: 12px; }
+.inkstone-annotation-sidebar select { max-width: 100%; min-height: 36px; }
+.inkstone-annotation-card { border: 1px solid var(--background-modifier-border); border-radius: 4px; padding: 12px; margin-block: 12px; overflow-wrap: anywhere; }
+.inkstone-annotation-card p { margin-block: 8px; }
+.inkstone-annotation-card-note { white-space: pre-wrap; color: var(--text-muted); }
+.inkstone-annotation-card-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.inkstone-annotation-card-actions button { min-height: 36px; }
+.inkstone-annotation-card-text { margin: 8px 0; padding-inline-start: 10px; border-inline-start: 2px solid var(--background-modifier-border); }
+.inkstone-annotation-card-kind { display: inline-block; font-size: 12px; color: var(--text-muted); border-bottom: 1px solid currentColor; }
+.inkstone-selection-toolbar {
+  position: fixed; z-index: 90; display: flex; flex-wrap: wrap; align-items: center;
+  gap: 4px; padding: 6px; max-width: calc(100vw - 16px); border: 1px solid var(--background-modifier-border-focus);
+  border-radius: 4px; background: var(--background-primary); color: var(--text-normal); box-shadow: none;
+}
+.inkstone-selection-toolbar button { min-width: 40px; min-height: 44px; padding: 6px 8px; box-shadow: none; border: 1px solid var(--background-modifier-border); }
+.inkstone-selection-toolbar .inkstone-toolbar-color { width: 40px; border-radius: 2px; }
+.inkstone-toolbar-underline { text-decoration: underline; text-underline-offset: 3px; }
+.inkstone-reading-navigation { display: flex; gap: 4px; }
+.inkstone-reading-navigation button { min-height: 24px; min-width: 30px; padding: 0 6px; background: transparent; box-shadow: none; }
+@media (max-width: 600px) {
+  .inkstone-selection-toolbar { gap: 2px; padding: 4px; }
+  .inkstone-selection-toolbar button { min-width: 36px; padding-inline: 6px; }
+  .inkstone-annotation-modal { max-height: calc(100dvh - 24px); overflow-y: auto; }
+  .inkstone-reading-navigation button { min-height: 44px; min-width: 44px; }
+}

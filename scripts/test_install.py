@@ -110,6 +110,143 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(other_plugin_file.read_text(), "keep me\n")
         self.assertEqual(enabled.read_text(), '["existing-plugin"]\n')
 
+    def test_update_replaces_runtime_and_preserves_personal_preferences(self):
+        self.run_install()
+        preferences = {
+            "appearance.json": b'{ "cssTheme": "Other", "theme": "obsidian", "baseFontSize": 23 }\n',
+            "app.json": b'{ "readableLineLength": false, "alwaysUpdateLinks": true }\n',
+            "community-plugins.json": b'["existing-plugin", "inkstone-annotations"]\n',
+            "plugins/inkstone-annotations/data.json": b'{"monochrome":true,"readingWidth":"wide"}\n',
+        }
+        for relative, content in preferences.items():
+            (self.config / relative).write_bytes(content)
+        runtime = (
+            "themes/Inkstone/theme.css", "themes/Inkstone/manifest.json",
+            "plugins/inkstone-annotations/main.js", "plugins/inkstone-annotations/styles.css",
+            "plugins/inkstone-annotations/manifest.json",
+        )
+        for relative in runtime:
+            (self.config / relative).write_bytes(b"old runtime\n")
+
+        changes, output = self.run_install(update=True)
+
+        self.assertEqual(changes, 5)
+        self.assertIn("更新完成", output)
+        for relative, content in preferences.items():
+            self.assertEqual((self.config / relative).read_bytes(), content)
+        self.assertEqual((self.config / "themes/Inkstone/theme.css").read_bytes(), (self.repo / "theme.css").read_bytes())
+        for name in ("main.js", "styles.css", "manifest.json"):
+            self.assertEqual((self.config / "plugins/inkstone-annotations" / name).read_bytes(), (self.repo / "annotations" / name).read_bytes())
+        backups = list((self.config / "inkstone-backups").iterdir())
+        self.assertEqual(len(backups), 1)
+        self.assertEqual({str(path.relative_to(backups[0])) for path in backups[0].rglob("*") if path.is_file()}, set(runtime))
+        for relative in runtime:
+            self.assertEqual((backups[0] / relative).read_bytes(), b"old runtime\n")
+
+    def test_update_does_not_create_preference_files(self):
+        changes, _ = self.run_install(update=True)
+        self.assertEqual(changes, 5)
+        self.assertFalse((self.config / "appearance.json").exists())
+        self.assertFalse((self.config / "app.json").exists())
+        self.assertFalse((self.config / "community-plugins.json").exists())
+
+    def test_update_ignores_invalid_unrelated_preference_json(self):
+        preferences = {"appearance.json": b"{invalid", "app.json": b"\xffnot UTF-8 JSON"}
+        for relative, content in preferences.items():
+            (self.config / relative).write_bytes(content)
+        changes, _ = self.run_install(update=True)
+        self.assertEqual(changes, 5)
+        for relative, content in preferences.items():
+            self.assertEqual((self.config / relative).read_bytes(), content)
+
+    def test_update_theme_only_changes_only_theme_runtime(self):
+        (self.config / "appearance.json").write_bytes(b'{"cssTheme":"Other","theme":"obsidian"}')
+        (self.config / "app.json").write_bytes(b'{"readableLineLength":false}')
+        (self.repo / "annotations/main.js").unlink()
+        changes, _ = self.run_install(update=True, theme_only=True)
+        self.assertEqual(changes, 2)
+        self.assertEqual((self.config / "appearance.json").read_bytes(), b'{"cssTheme":"Other","theme":"obsidian"}')
+        self.assertEqual((self.config / "app.json").read_bytes(), b'{"readableLineLength":false}')
+        self.assertFalse((self.config / "plugins").exists())
+
+    def test_plugin_only_preserves_theme_preferences_and_plugin_data(self):
+        self.run_install()
+        (self.repo / "theme.css").unlink()
+        (self.repo / "manifest.json").unlink()
+        preserved = {
+            "themes/Inkstone/theme.css": b"custom theme\n",
+            "themes/Inkstone/manifest.json": b"custom manifest\n",
+            "appearance.json": b'{"cssTheme":"Other","theme":"obsidian"}',
+            "app.json": b"{invalid",
+            "community-plugins.json": b'["existing-plugin"]',
+            "plugins/inkstone-annotations/data.json": b'{"monochrome":true}',
+        }
+        for relative, content in preserved.items():
+            (self.config / relative).write_bytes(content)
+        for name in ("main.js", "styles.css", "manifest.json"):
+            (self.config / "plugins/inkstone-annotations" / name).write_bytes(b"old plugin\n")
+
+        changes, output = self.run_install(plugin_only=True)
+
+        self.assertEqual(changes, 3)
+        self.assertIn("安装完成", output)
+        for relative, content in preserved.items():
+            self.assertEqual((self.config / relative).read_bytes(), content)
+        for name in ("main.js", "styles.css", "manifest.json"):
+            self.assertEqual((self.config / "plugins/inkstone-annotations" / name).read_bytes(), (self.repo / "annotations" / name).read_bytes())
+        backup = next((self.config / "inkstone-backups").iterdir())
+        self.assertEqual({str(path.relative_to(backup)) for path in backup.rglob("*") if path.is_file()}, {
+            "plugins/inkstone-annotations/main.js", "plugins/inkstone-annotations/styles.css",
+            "plugins/inkstone-annotations/manifest.json",
+        })
+
+    def test_update_plugin_only_does_not_create_theme_or_preferences(self):
+        changes, _ = self.run_install(update=True, plugin_only=True)
+        self.assertEqual(changes, 3)
+        self.assertFalse((self.config / "themes").exists())
+        self.assertFalse((self.config / "appearance.json").exists())
+        self.assertFalse((self.config / "app.json").exists())
+
+    def test_update_dry_run_preserves_all_files(self):
+        self.run_install()
+        (self.config / "appearance.json").write_bytes(b"{invalid")
+        (self.config / "app.json").write_bytes(b'{"readableLineLength":false}')
+        (self.config / "plugins/inkstone-annotations/main.js").write_bytes(b"old plugin\n")
+        before = self.snapshot(self.vault)
+        changes, output = self.run_install(update=True, dry_run=True)
+        self.assertEqual(changes, 1)
+        self.assertIn("更新预览", output)
+        self.assertEqual(self.snapshot(self.vault), before)
+
+    def test_theme_only_and_plugin_only_refuse_before_any_write(self):
+        before = self.snapshot(self.vault)
+        for update in (False, True):
+            for operation in (install.create_plan, install.install):
+                with self.subTest(update=update, operation=operation.__name__):
+                    with self.assertRaises(install.InstallError):
+                        operation(self.vault, theme_only=True, plugin_only=True, update=update)
+        self.assertEqual(self.snapshot(self.vault), before)
+
+    def test_cli_update_and_plugin_only_preserve_preferences(self):
+        (self.config / "appearance.json").write_bytes(b'{"cssTheme":"Other"}')
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            status = install.main(["--vault", str(self.vault), "--update", "--plugin-only"])
+        self.assertEqual(status, 0)
+        self.assertIn("更新完成", output.getvalue())
+        self.assertEqual((self.config / "appearance.json").read_bytes(), b'{"cssTheme":"Other"}')
+        self.assertFalse((self.config / "themes").exists())
+        self.assertTrue((self.config / "plugins/inkstone-annotations/main.js").is_file())
+
+    def test_cli_theme_only_and_plugin_only_are_mutually_exclusive(self):
+        before = self.snapshot(self.vault)
+        for extra in ([], ["--update"]):
+            with self.subTest(extra=extra), contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as raised:
+                    install.main(["--vault", str(self.vault), "--theme-only", "--plugin-only"] + extra)
+                self.assertEqual(raised.exception.code, 2)
+        self.assertEqual(self.snapshot(self.vault), before)
+
     def test_existing_correct_settings_keep_original_bytes(self):
         appearance = self.config / "appearance.json"
         original = b'{ "theme": "moonstone", "cssTheme": "Inkstone", "baseFontSize": 20 }'

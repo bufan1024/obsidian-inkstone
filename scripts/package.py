@@ -26,6 +26,9 @@ THEME_FILES = (
     "preview-annotations.png",
     "preview-highlights.png",
     "preview-monochrome.png",
+    "preview-workspace.png",
+    "preview-live-preview.png",
+    "preview-reading-settings.png",
     "examples/阅读与排版示例.md",
     "examples/划线与备注示例.md",
 )
@@ -44,6 +47,7 @@ RELEASE_DOC_LINKS = {
     "annotations/README.md": SOURCE_URL + "annotations/README.md",
     "scripts/install.py": SOURCE_URL + "scripts/install.py",
     "scripts/package.py": SOURCE_URL + "scripts/package.py",
+    "tests/native/README.md": SOURCE_URL + "tests/native/README.md",
     "README.md#用-codex--ai-安装": AI_INSTALL_URL,
 }
 VERSION_PATTERN = re.compile(
@@ -92,7 +96,7 @@ def kit_readme(theme_version: str, plugin_version: str) -> bytes:
 
 主题版本 {theme_version}，标注插件版本 {plugin_version}。本包已包含运行所需文件，无需 Node.js 或构建步骤。
 
-## 一键安装
+## 首次安装
 
 1. 关闭 Obsidian，解压整个合集，并确保电脑已安装 Python 3。
 2. 在解压后的目录打开终端，将下方路径替换为你的笔记库绝对路径后运行：
@@ -103,9 +107,28 @@ def kit_readme(theme_version: str, plugin_version: str) -> bytes:
 
    Windows 可使用 `py -3` 替换 `python3`。可以先加 `--dry-run` 查看计划。
 3. 重新打开 Obsidian。在「设置 → 第三方插件」关闭受限模式，并手动启用「墨读标注 Inkstone Annotations」。安装程序不会自动启用第三方插件。
-4. 在「设置 → 编辑器」打开「可读行宽」。选中文字，右键打开「墨读：标注与备注…」。
+4. 选中普通文字，使用快捷标注条、右键「墨读：标注与备注…」或同名命令添加标注。
 
-只安装主题可添加 `--theme-only`。使用自定义配置文件夹时添加 `--config-dir "配置文件夹名"`。
+首次完整安装会选用 Inkstone 浅色主题并开启可读行宽。只安装主题可添加 `--theme-only`；只安装插件可添加 `--plugin-only`，不会切换主题、配色或行宽。使用自定义配置文件夹时添加 `--config-dir "配置文件夹名"`。
+
+## 更新已有安装
+
+获取新版合集并解压，关闭 Obsidian 后运行：
+
+```sh
+# 更新主题与插件运行文件，保留个人偏好
+python3 scripts/install.py --vault "/你的笔记库路径" --update
+
+# 只更新标注插件
+python3 scripts/install.py --vault "/你的笔记库路径" --update --plugin-only
+
+# 只更新主题
+python3 scripts/install.py --vault "/你的笔记库路径" --update --theme-only
+```
+
+可先加 `--dry-run` 查看计划。`--update` 不读取或改写 `appearance.json`、`app.json`，保留当前主题、配色和可读行宽偏好；`--plugin-only` 无论是否配合 `--update`，都只处理插件的三个运行文件。`--theme-only` 和 `--plugin-only` 不能同时使用。
+
+内容不同的旧文件会先备份，终端会打印备份位置。插件 `data.json`、已启用插件列表和笔记正文会保留。已有用户请使用 `--update`；再次运行首次完整安装命令会重新选用 Inkstone、浅色配色和可读行宽。脚本完成后请重启 Obsidian，脚本不会自动启用插件。
 
 完整安装、备份与恢复说明见 [INSTALL.md](INSTALL.md)，Codex / AI 助手完整提示词见 [在线 README]({AI_INSTALL_URL})。主题功能与截图见 [主题说明](themes/Inkstone/README.md)，标注使用说明见 [插件说明](plugins/inkstone-annotations/README.md)。
 
@@ -175,7 +198,7 @@ def main() -> int:
         installer = read_project_file(INSTALLER_FILE)
         theme_version = manifest_version(theme["manifest.json"], "theme")
         plugin_version = manifest_version(plugin["manifest.json"], "plugin")
-        for name in ("README.md", "INSTALL.md"):
+        for name in ("README.md", "INSTALL.md", "VALIDATION.md"):
             theme[name] = release_markdown(theme[name], RELEASE_DOC_LINKS)
 
         theme_package = {f"Inkstone/{name}": data for name, data in theme.items()}
@@ -195,7 +218,8 @@ def main() -> int:
                     theme["INSTALL.md"],
                     {
                         "examples/阅读与排版示例.md": SOURCE_URL
-                        + "examples/阅读与排版示例.md"
+                        + "examples/阅读与排版示例.md",
+                        "VALIDATION.md": "themes/Inkstone/VALIDATION.md",
                     },
                 ),
                 INSTALLER_FILE: installer,

@@ -1,28 +1,28 @@
 'use strict';
 
 const { Plugin, Modal, Setting, Notice, Menu, MarkdownView, PluginSettingTab } = require('obsidian');
-const { buildAnnotationPlan, validateSelection, applyChanges } = annotationCore;
-const PALETTE = [ ['yellow', '黄色'], ['green', '绿色'], ['blue', '蓝色'], ['rose', '粉色'] ];
+const { buildAnnotationPlan, buildEditAnnotationPlan, buildRemoveAnnotationPlan, parseAnnotations, projectReadingParagraph, validateSelection, applyChanges } = annotationCore;
+const PALETTE = [['yellow', '黄色'], ['green', '绿色'], ['blue', '蓝色'], ['rose', '粉色']];
+const READING_PROPERTIES = ['--inkstone-line-height', '--inkstone-line-width'];
 
 class AnnotationModal extends Modal {
-  constructor(plugin, capture, kind = 'highlight') {
+  constructor(plugin, capture, requestedKind) {
     super(plugin.app);
     this.plugin = plugin;
     this.capture = capture;
-    this.kind = kind;
-    this.color = 'yellow';
-    this.note = '';
+    this.kind = capture.annotation?.kind || requestedKind || plugin.settings.lastKind;
+    this.focusNote = requestedKind === 'note';
+    this.color = capture.annotation ? capture.annotation.color : plugin.settings.lastColor;
+    this.note = capture.annotation?.note || '';
     this.busy = false;
   }
-
   onOpen() {
     this.plugin.modals.add(this);
     this.modalEl.addClass('inkstone-annotation-modal');
-    this.contentEl.createEl('h2', { text: '标注与备注' });
+    this.contentEl.createEl('h2', { text: this.capture.annotation ? '编辑标注' : '标注与备注' });
     this.contentEl.createEl('p', { cls: 'inkstone-dialog-description', text: '选择一种标记，可附加备注。点击标记旁的脚注编号即可查看备注。' });
-    const selected = this.capture.snapshot.slice(this.capture.from, this.capture.to);
+    const selected = this.capture.annotation?.text || this.capture.snapshot.slice(this.capture.from, this.capture.to);
     this.contentEl.createEl('blockquote', { cls: 'inkstone-selection-preview', text: Array.from(selected).slice(0, 200).join('') + (Array.from(selected).length > 200 ? '…' : '') });
-
     const choices = this.contentEl.createDiv({ cls: 'inkstone-annotation-choices', attr: { 'aria-label': '标注样式', role: 'group' } });
     this.choiceButtons = [];
     const addChoice = (kind, color, label) => {
@@ -35,10 +35,9 @@ class AnnotationModal extends Modal {
     addChoice('underline', 'yellow', '下划线');
     for (const [color, label] of PALETTE) addChoice('highlight', color, label);
     this.refreshChoices();
-
-    new Setting(this.contentEl).setName('备注').setDesc(this.kind === 'note' ? '填写备注后保存。' : '可选，备注将保存在当前笔记的文末。')
+    new Setting(this.contentEl).setName('备注').setDesc('可选，备注保存在当前笔记的文末。')
       .addTextArea(input => {
-        input.setPlaceholder('写下你的想法…').onChange(value => { this.note = value; });
+        input.setValue(this.note).setPlaceholder('写下你的想法…').onChange(value => { this.note = value; });
         input.inputEl.setAttribute('aria-label', '备注内容');
         this.noteInput = input.inputEl;
       });
@@ -46,15 +45,17 @@ class AnnotationModal extends Modal {
       .addToggle(toggle => toggle.setValue(this.plugin.settings.monochrome).onChange(value => this.plugin.setMonochrome(value)));
     this.errorEl = this.contentEl.createDiv({ cls: 'inkstone-annotation-error', attr: { role: 'alert' } });
     const actions = this.contentEl.createDiv({ cls: 'inkstone-annotation-actions' });
-    const cancel = actions.createEl('button', { text: '取消', attr: { type: 'button' } });
-    cancel.addEventListener('click', () => this.close());
+    if (this.capture.annotation) {
+      const remove = actions.createEl('button', { text: '移除标注', cls: 'inkstone-remove-annotation', attr: { type: 'button' } });
+      remove.addEventListener('click', () => this.perform(() => this.plugin.removeAnnotation(this.capture.annotation.from, this.capture)));
+    }
+    actions.createEl('button', { text: '取消', attr: { type: 'button' } }).addEventListener('click', () => this.close());
     this.saveButton = actions.createEl('button', { text: '保存标注', cls: 'mod-cta', attr: { type: 'button' } });
     this.saveButton.addEventListener('click', () => this.submit());
     this.contentEl.createEl('p', { cls: 'inkstone-dialog-hint', text: '可在命令面板中使用「墨读：撤销上次标注」。编辑视图也可使用系统撤销。' });
     this.scope.register(['Mod'], 'Enter', event => { event.preventDefault(); void this.submit(); return false; });
-    if (this.kind === 'note') this.noteInput.focus();
+    if (this.focusNote) this.noteInput.focus();
   }
-
   refreshChoices() {
     for (const choice of this.choiceButtons) {
       const selected = choice.kind === (this.kind === 'note' ? 'underline' : this.kind) && (choice.kind === 'underline' || choice.color === this.color);
@@ -62,198 +63,387 @@ class AnnotationModal extends Modal {
       choice.button.setAttribute('aria-pressed', String(selected));
     }
   }
-
-  async submit() {
+  async perform(work) {
     if (this.busy) return;
     this.busy = true;
     this.saveButton.disabled = true;
     this.errorEl.setText('');
-    try {
-      await this.plugin.commit(this.capture, { kind: this.kind, color: this.color, note: this.note });
-      this.close();
-    } catch (error) {
-      this.errorEl.setText(error.message || '未能保存标注，请重新选择文字。');
-    } finally {
-      this.busy = false;
-      this.saveButton.disabled = false;
-    }
+    try { await work(); this.close(); }
+    catch (error) { this.errorEl.setText(error.message || '未能保存标注，请重新选择文字。'); }
+    finally { this.busy = false; this.saveButton.disabled = false; }
   }
-
+  submit() { return this.perform(() => this.plugin.commit(this.capture, { kind: this.kind, color: this.color, note: this.note })); }
   onClose() { this.plugin.modals.delete(this); this.contentEl.empty(); }
 }
 
 class AnnotationSettings extends PluginSettingTab {
   constructor(app, plugin) { super(app, plugin); this.plugin = plugin; }
   display() {
+    const plugin = this.plugin;
     this.containerEl.empty();
-    this.containerEl.createEl('h2', { text: '墨读标注' });
-    new Setting(this.containerEl).setName('墨水屏显示').setDesc('关闭时显示四色高亮；开启后使用灰底及实线、双线、点线、虚线。')
-      .addToggle(toggle => toggle.setValue(this.plugin.settings.monochrome).onChange(value => this.plugin.setMonochrome(value)));
+    this.containerEl.createEl('h2', { text: '墨读阅读与标注' });
+    new Setting(this.containerEl).setName('墨水屏显示').setDesc('使用灰底及实线、双线、点线、虚线。')
+      .addToggle(toggle => toggle.setValue(plugin.settings.monochrome).onChange(value => plugin.setMonochrome(value)));
+    new Setting(this.containerEl).setName('快捷标注条').setDesc('选中文字后显示颜色、划线和备注操作，支持触控。')
+      .addToggle(toggle => toggle.setValue(plugin.settings.toolbar).onChange(async value => {
+        plugin.settings.toolbar = value; plugin.hideToolbars(); await plugin.saveData(plugin.settings);
+      }));
+    this.containerEl.createEl('h3', { text: '阅读排版' });
+    this.containerEl.createEl('p', { cls: 'inkstone-dialog-description', text: '字号与字体使用「设置 → 外观」中的原生控制。下列预设用于 Inkstone 主题。' });
+    new Setting(this.containerEl).setName('阅读行高').addDropdown(dropdown => dropdown
+      .addOptions({ '': '跟随主题 / CSS', '1.5': '紧凑 · 1.5', '1.75': '舒适 · 1.75', '2': '宽松 · 2.0' })
+      .setValue(plugin.settings.readingLineHeight || '').onChange(value => plugin.setReadingPreference('readingLineHeight', value)));
+    new Setting(this.containerEl).setName('阅读行宽').addDropdown(dropdown => dropdown
+      .addOptions({ '': '跟随主题 / CSS', '32em': '窄 · 32em', '40em': '标准 · 40em', '48em': '宽 · 48em' })
+      .setValue(plugin.settings.readingLineWidth || '').onChange(value => plugin.setReadingPreference('readingLineWidth', value)));
+    new Setting(this.containerEl).setName('恢复阅读预设').setDesc('恢复主题或 CSS 设置，保留原生字号与字体。')
+      .addButton(button => button.setButtonText('恢复默认').onClick(async () => {
+        plugin.settings.readingLineHeight = ''; plugin.settings.readingLineWidth = '';
+        plugin.applyReadingPreferences(); await plugin.saveData(plugin.settings); this.display();
+      }));
   }
 }
 
 module.exports = class InkstoneAnnotations extends Plugin {
   async onload() {
-    const saved = await this.loadData();
-    this.settings = { monochrome: Boolean(saved?.monochrome) };
+    const saved = await this.loadData() || {};
+    this.settings = {
+      monochrome: Boolean(saved.monochrome), toolbar: saved.toolbar !== false,
+      lastKind: saved.lastKind === 'underline' ? 'underline' : 'highlight',
+      lastColor: PALETTE.some(([color]) => color === saved.lastColor) ? saved.lastColor : 'yellow',
+      readingLineHeight: ['1.5', '1.75', '2'].includes(saved.readingLineHeight) ? saved.readingLineHeight : '',
+      readingLineWidth: ['32em', '40em', '48em'].includes(saved.readingLineWidth) ? saved.readingLineWidth : ''
+    };
     this.active = true;
-    this.modals = new Set();
-    this.documents = new Set();
-    this.sections = new WeakMap();
-    this.lastAction = null;
-    this.registerMarkdownPostProcessor((element, context) => {
-      this.sections.set(element, { context, element });
-    });
+    this.modals = new Set(); this.documents = new Set(); this.sections = new WeakMap();
+    this.readingTargets = new WeakMap(); this.recordCache = new Map();
+    this.toolbars = new Map(); this.toolbarTimers = new Map(); this.readingOriginals = new Map();
+    this.lastAction = null; this.lastMarkdownView = null;
+    this.registerView(annotationViews.VIEW_TYPE, leaf => new (annotationViews.createSidebarClass(this))(leaf));
+    this.registerEditorExtension(annotationEditor.createEditorExtension(this));
+    this.registerMarkdownPostProcessor((element, context) => this.processReadingSection(element, context));
     this.app.workspace.onLayoutReady(() => {
       if (!this.active) return;
+      this.rememberMarkdownView();
       this.app.workspace.iterateAllLeaves(leaf => {
         if (leaf.view instanceof MarkdownView && leaf.view.getMode() === 'preview') leaf.view.previewMode.rerender(true);
       });
     });
     this.bindDocument(document);
     this.registerEvent(this.app.workspace.on('window-open', (_window, win) => this.bindDocument(win.document)));
+    this.registerEvent(this.app.workspace.on('active-leaf-change', () => { this.rememberMarkdownView(); this.hideToolbars(); }));
+    this.registerEvent(this.app.workspace.on('editor-change', () => {
+      this.hideToolbars(); this.scheduleToolbar(this.currentDocument());
+    }));
     this.addSettingTab(new AnnotationSettings(this.app, this));
     this.addRibbonIcon('highlighter', '墨读：标注与备注', () => this.openAnnotation());
     this.addCommand({ id: 'annotate', name: '墨读：标注与备注', callback: () => this.openAnnotation() });
     this.addCommand({ id: 'underline', name: '墨读：添加下划线', callback: () => this.quickUnderline() });
     this.addCommand({ id: 'add-note', name: '墨读：添加备注', callback: () => this.openAnnotation(null, 'note') });
-    for (const [color, label] of PALETTE) {
-      this.addCommand({ id: `highlight-${color}`, name: `墨读：${label}高亮`, callback: () => this.quickHighlight(color) });
-    }
+    for (const [color, label] of PALETTE) this.addCommand({ id: `highlight-${color}`, name: `墨读：${label}高亮`, callback: () => this.quickHighlight(color) });
     this.addCommand({ id: 'toggle-monochrome', name: '墨读：切换彩色／灰阶标注', callback: () => this.setMonochrome(!this.settings.monochrome) });
+    this.addCommand({ id: 'show-annotations', name: '墨读：打开标注侧栏', callback: () => this.showAnnotations() });
+    this.addCommand({ id: 'export-annotations', name: '墨读：导出当前笔记摘录', callback: () => this.exportAnnotations() });
+    this.addCommand({ id: 'next-page', name: '墨读：下一屏', callback: () => this.turnPage(1) });
+    this.addCommand({ id: 'previous-page', name: '墨读：上一屏', callback: () => this.turnPage(-1) });
     this.addCommand({ id: 'undo-annotation', name: '墨读：撤销上次标注', checkCallback: checking => {
       const available = !!this.lastAction;
       if (!checking && available) void this.undoAnnotation();
       return available;
     } });
     this.registerEvent(this.app.workspace.on('editor-menu', (menu, editor, info) => {
-      if (!editor.somethingSelected()) return;
+      let capture;
+      try { capture = this.captureEditor(editor, info); } catch { return; }
       menu.addSeparator();
-      menu.addItem(item => item.setTitle('墨读：标注与备注…').setIcon('highlighter').onClick(() => {
-        try { this.openAnnotation(this.captureEditor(editor, info)); } catch (error) { new Notice(error.message); }
-      }));
-      menu.addItem(item => item.setTitle('墨读：添加下划线').setIcon('underline').onClick(() => {
-        try { void this.quickUnderline(this.captureEditor(editor, info)); } catch (error) { new Notice(error.message); }
-      }));
+      menu.addItem(item => item.setTitle(capture.annotation ? '墨读：编辑标注…' : '墨读：标注与备注…').setIcon('highlighter').onClick(() => this.openAnnotation(capture)));
+      menu.addItem(item => item.setTitle('墨读：添加下划线').setIcon('underline').onClick(() => this.quickUnderline(capture)));
     }));
+    const status = this.addStatusBarItem();
+    status.addClass('inkstone-reading-navigation');
+    for (const [direction, label, text] of [[-1, '上一屏', '↑'], [1, '下一屏', '↓']]) {
+      const button = status.createEl('button', { text, attr: { 'aria-label': `墨读：${label}`, title: `墨读：${label}`, type: 'button' } });
+      button.addEventListener('click', () => this.turnPage(direction));
+    }
   }
-
   onunload() {
     this.active = false;
-    for (const modal of this.modals) modal.close();
-    for (const doc of this.documents) doc.body.classList.remove('inkstone-annotations-monochrome');
-    this.lastAction = null;
+    for (const modal of [...this.modals]) modal.close();
+    this.hideToolbars();
+    for (const [doc, timer] of this.toolbarTimers) doc.defaultView.clearTimeout(timer);
+    for (const doc of this.documents) {
+      doc.body.classList.remove('inkstone-annotations-monochrome');
+      this.restoreReadingProperties(doc);
+    }
+    this.app.workspace.detachLeavesOfType(annotationViews.VIEW_TYPE);
+    this.recordCache.clear();
+    this.lastAction = null; this.lastMarkdownView = null;
   }
-
+  rememberMarkdownView() {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (view) this.lastMarkdownView = view;
+    return view;
+  }
+  currentView() {
+    const active = this.rememberMarkdownView();
+    const sidebarActive = this.app.workspace.activeLeaf?.view?.getViewType?.() === annotationViews.VIEW_TYPE;
+    const view = active || (sidebarActive ? this.lastMarkdownView : null);
+    if (!view?.file || !this.app.workspace.getLeavesOfType('markdown').some(leaf => leaf.view === view)) throw new Error('请先打开一篇 Markdown 笔记。');
+    return view;
+  }
+  currentDocument() { try { return this.currentView().containerEl.ownerDocument; } catch { return document; } }
+  recordsFor(snapshot, filePath) {
+    const cached = this.recordCache.get(filePath);
+    if (cached?.snapshot === snapshot) return cached.records;
+    const records = parseAnnotations(snapshot);
+    if (this.recordCache.size >= 8 && !this.recordCache.has(filePath)) this.recordCache.delete(this.recordCache.keys().next().value);
+    this.recordCache.set(filePath, { snapshot, records });
+    return records;
+  }
+  getAnnotationContext() {
+    try {
+      const view = this.currentView();
+      const snapshot = view.getMode() === 'preview' ? view.getViewData() : view.editor.getValue();
+      return { view, filePath: view.file.path, snapshot, records: this.recordsFor(snapshot, view.file.path) };
+    } catch { return null; }
+  }
+  async showAnnotations() {
+    this.rememberMarkdownView();
+    let leaf = this.app.workspace.getLeavesOfType(annotationViews.VIEW_TYPE)[0];
+    if (!leaf) { leaf = this.app.workspace.getRightLeaf(false); if (!leaf) return; await leaf.setViewState({ type: annotationViews.VIEW_TYPE, active: true }); }
+    await this.app.workspace.revealLeaf(leaf);
+  }
+  processReadingSection(element, context) {
+    this.sections.set(element, { context, element });
+    const info = context.getSectionInfo(element);
+    if (!info) return;
+    const lines = info.text.split('\n');
+    const start = lines.slice(0, info.lineStart).reduce((total, line) => total + line.length + 1, 0);
+    const end = lines.slice(0, info.lineEnd + 1).reduce((total, line) => total + line.length + 1, 0);
+    const records = this.recordsFor(info.text, context.sourcePath).filter(record => record.from >= start && record.to <= end);
+    const nodes = [...element.querySelectorAll('mark.inkstone-highlight, u.inkstone-underline')];
+    if (nodes.length !== records.length) return;
+    nodes.forEach((node, index) => {
+      const record = records[index];
+      if (node.textContent === record.text) {
+        this.readingTargets.set(node, { filePath: context.sourcePath, snapshot: info.text, from: record.from, text: record.text });
+        node.dataset.inkstoneFrom = String(record.from);
+        node.setAttribute('tabindex', '0'); node.setAttribute('role', 'button');
+        node.setAttribute('aria-label', `编辑标注：${record.text}`);
+      }
+    });
+  }
+  readingAnnotationContext(node, view) {
+    const rendered = this.readingTargets.get(node);
+    if (!rendered || rendered.filePath !== view.file?.path) throw new Error('嵌入笔记中的标注请先打开原笔记后编辑。');
+    if (rendered.snapshot !== view.getViewData() || node.textContent !== rendered.text) throw new Error('笔记正在更新，请重新点击标注。');
+    const context = { view, filePath: rendered.filePath, snapshot: rendered.snapshot, records: this.recordsFor(rendered.snapshot, rendered.filePath) };
+    this.assertCurrent(context);
+    return context;
+  }
   bindDocument(doc) {
     if (this.documents.has(doc)) return;
     this.documents.add(doc);
+    this.readingOriginals.set(doc, READING_PROPERTIES.map(name => ({ name, value: doc.body.style.getPropertyValue(name), priority: doc.body.style.getPropertyPriority(name) })));
     doc.body.classList.toggle('inkstone-annotations-monochrome', this.settings.monochrome);
+    this.applyReadingPreferences();
     this.registerDomEvent(doc, 'contextmenu', event => {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
       if (!view || view.getMode() !== 'preview' || !view.contentEl.contains(event.target)) return;
+      const mark = event.target.closest?.('[data-inkstone-from]');
+      if (mark) {
+        let context;
+        try { context = this.readingAnnotationContext(mark, view); } catch (error) { new Notice(error.message); return; }
+        event.preventDefault(); event.stopPropagation();
+        const menu = new Menu();
+        menu.addItem(item => item.setTitle('墨读：编辑标注…').setIcon('highlighter').onClick(() => this.editAnnotation(Number(mark.dataset.inkstoneFrom), context)));
+        menu.addItem(item => item.setTitle('墨读：移除标注').setIcon('eraser').onClick(() => this.removeAnnotation(Number(mark.dataset.inkstoneFrom), context)));
+        menu.showAtMouseEvent(event); return;
+      }
       const selected = doc.getSelection();
       if (!selected || selected.isCollapsed || !view.contentEl.contains(selected.anchorNode) || !view.contentEl.contains(selected.focusNode)) return;
-      // Capture before the menu takes focus, using the renderer's source section.
       let capture;
       try { capture = this.captureReading(view); } catch (error) { new Notice(error.message); return; }
-      event.preventDefault();
-      event.stopPropagation();
+      event.preventDefault(); event.stopPropagation(); this.hideToolbars();
       const menu = new Menu();
       menu.addItem(item => item.setTitle('墨读：标注与备注…').setIcon('highlighter').onClick(() => this.openAnnotation(capture)));
       menu.addItem(item => item.setTitle('墨读：添加下划线').setIcon('underline').onClick(() => this.quickUnderline(capture)));
       menu.showAtMouseEvent(event);
     }, true);
+    this.registerDomEvent(doc, 'click', event => {
+      const mark = event.target.closest?.('[data-inkstone-from]');
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (mark && view?.getMode() === 'preview' && view.contentEl.contains(mark) && doc.getSelection()?.isCollapsed !== false) {
+        event.preventDefault();
+        try { this.editAnnotation(Number(mark.dataset.inkstoneFrom), this.readingAnnotationContext(mark, view)); }
+        catch (error) { new Notice(error.message); }
+      }
+    });
+    this.registerDomEvent(doc, 'keydown', event => {
+      if ((event.key === 'Enter' || event.key === ' ') && event.target.matches?.('[data-inkstone-from]')) {
+        event.preventDefault();
+        try { this.editAnnotation(Number(event.target.dataset.inkstoneFrom), this.readingAnnotationContext(event.target, this.currentView())); }
+        catch (error) { new Notice(error.message); }
+        return;
+      }
+      if (event.key === 'Escape') this.hideToolbars();
+      else this.scheduleToolbar(doc);
+    });
+    for (const name of ['selectionchange', 'pointerup', 'keyup', 'touchend']) this.registerDomEvent(doc, name, () => this.scheduleToolbar(doc));
+    this.registerDomEvent(doc, 'scroll', () => this.hideToolbars(), true);
+    this.registerDomEvent(doc, 'pointerdown', event => {
+      if (!event.target.closest?.('.inkstone-selection-toolbar')) this.hideToolbars();
+    });
   }
-
+  restoreReadingProperties(doc) {
+    for (const { name, value, priority } of this.readingOriginals.get(doc) || []) {
+      if (value) doc.body.style.setProperty(name, value, priority); else doc.body.style.removeProperty(name);
+    }
+  }
+  applyReadingPreferences() {
+    for (const doc of this.documents) {
+      this.restoreReadingProperties(doc);
+      if (this.settings.readingLineHeight) doc.body.style.setProperty('--inkstone-line-height', this.settings.readingLineHeight);
+      if (this.settings.readingLineWidth) doc.body.style.setProperty('--inkstone-line-width', this.settings.readingLineWidth);
+    }
+  }
+  async setReadingPreference(key, value) { this.settings[key] = value; this.applyReadingPreferences(); await this.saveData(this.settings); }
   async setMonochrome(value) {
     this.settings.monochrome = value;
     for (const doc of this.documents) doc.body.classList.toggle('inkstone-annotations-monochrome', value);
     await this.saveData(this.settings);
   }
-
-  currentView() {
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!view?.file) throw new Error('请先打开一篇 Markdown 笔记。');
-    return view;
+  scheduleToolbar(doc) {
+    if (!this.active || !this.settings.toolbar || this.modals.size) return;
+    const previous = this.toolbarTimers.get(doc);
+    if (previous) doc.defaultView.clearTimeout(previous);
+    this.toolbarTimers.set(doc, doc.defaultView.setTimeout(() => { this.toolbarTimers.delete(doc); this.showToolbar(doc); }, 120));
   }
-
+  hideToolbars() { for (const toolbar of this.toolbars.values()) toolbar.remove(); this.toolbars.clear(); }
+  showToolbar(doc) {
+    if (!this.active || !this.settings.toolbar || this.modals.size || doc.querySelector('.modal-container')) return;
+    let capture;
+    try {
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (!view || view.containerEl.ownerDocument !== doc) return this.hideToolbars();
+      if (view.getMode() !== 'preview' && !view.editor.somethingSelected()) return this.hideToolbars();
+      capture = this.capture();
+    } catch { return this.hideToolbars(); }
+    this.hideToolbars();
+    const toolbar = doc.createElement('div'); toolbar.className = 'inkstone-selection-toolbar';
+    toolbar.setAttribute('role', 'toolbar'); toolbar.setAttribute('aria-label', '墨读快捷标注');
+    toolbar.addEventListener('pointerdown', event => event.preventDefault());
+    toolbar.addEventListener('mousedown', event => event.preventDefault());
+    const add = (label, text, work, className = '') => {
+      const button = doc.createElement('button'); button.type = 'button'; button.textContent = text;
+      button.setAttribute('aria-label', label); button.title = label; button.className = className;
+      button.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); this.hideToolbars(); work(); });
+      toolbar.appendChild(button);
+    };
+    for (const [color, label] of PALETTE) add(label, '', () => this.commit(capture, { kind: 'highlight', color }).catch(error => new Notice(error.message)), `inkstone-toolbar-color inkstone-swatch-${color}`);
+    add('下划线', 'Aa', () => this.quickUnderline(capture), 'inkstone-toolbar-underline');
+    add('备注', '备注', () => this.openAnnotation(capture, 'note'));
+    add('打开标注侧栏', '清单', () => this.showAnnotations());
+    doc.body.appendChild(toolbar); this.toolbars.set(doc, toolbar);
+    const selection = doc.getSelection();
+    const rect = selection?.rangeCount ? selection.getRangeAt(0).getBoundingClientRect() : null;
+    const viewRect = capture.view.contentEl.getBoundingClientRect();
+    const bounds = toolbar.getBoundingClientRect();
+    const x = rect?.width ? rect.left + rect.width / 2 - bounds.width / 2 : viewRect.left + (viewRect.width - bounds.width) / 2;
+    const y = rect?.height ? rect.top - bounds.height - 8 : viewRect.top + 8;
+    toolbar.style.left = `${Math.max(8, Math.min(x, doc.defaultView.innerWidth - bounds.width - 8))}px`;
+    toolbar.style.top = `${Math.max(8, Math.min(y, doc.defaultView.innerHeight - bounds.height - 8))}px`;
+  }
   captureEditor(editor, info) {
     const view = this.currentView();
     if (view.editor !== editor || view.file.path !== info.file?.path) throw new Error('请在当前笔记中重新选择文字。');
     if (editor.listSelections().length !== 1) throw new Error('请一次只选择一段文字。');
     const snapshot = editor.getValue();
-    const from = editor.posToOffset(editor.getCursor('from'));
-    const to = editor.posToOffset(editor.getCursor('to'));
-    validateSelection({ document: snapshot, from, to });
-    return { view, editor, filePath: view.file.path, snapshot, from, to, reading: false };
+    const from = editor.posToOffset(editor.getCursor('from')), to = editor.posToOffset(editor.getCursor('to'));
+    const annotation = this.recordsFor(snapshot, view.file.path).find(record => from >= record.contentFrom && to <= record.contentTo);
+    if (!annotation || from !== to) validateSelection({ document: snapshot, from, to });
+    return { view, editor, filePath: view.file.path, snapshot, from, to, annotation, reading: false };
   }
-
-  captureReading(view) {
-    const selection = view.containerEl.ownerDocument.getSelection();
-    if (!selection || selection.isCollapsed || !view.contentEl.contains(selection.anchorNode) || !view.contentEl.contains(selection.focusNode)) throw new Error('请先选中笔记中的普通文字，再右键添加标注。');
-    const help = '阅读视图请只选择纯文本段落；含有格式的段落请切换到编辑视图后标注。';
-    const node = selection.anchorNode;
-    const paragraph = node.parentElement?.closest('p');
-    if (node.nodeType !== 3 || node !== selection.focusNode || paragraph?.childNodes.length !== 1 || paragraph.firstChild !== node) throw new Error(help);
-    let section = paragraph;
-    while (section && section !== view.contentEl && !this.sections.has(section)) section = section.parentElement;
-    const mapped = this.sections.get(section);
+  readingSection(view, paragraph) {
+    let element = paragraph;
+    while (element && element !== view.contentEl && !this.sections.has(element)) element = element.parentElement;
+    const mapped = this.sections.get(element);
     const info = mapped?.context.getSectionInfo(mapped.element);
-    if (!mapped || mapped.context.sourcePath !== view.file.path || !info || info.lineStart !== info.lineEnd || !section.classList.contains('el-p')) throw new Error(help);
+    if (!mapped || mapped.context.sourcePath !== view.file.path || !info || info.lineStart !== info.lineEnd || !element.classList.contains('el-p')) throw new Error('此段含有复杂格式，请切换到编辑视图标注。');
     const snapshot = view.getViewData();
     if (info.text !== snapshot) throw new Error('笔记正在更新，请重新选择文字后标注。');
     const lines = snapshot.split('\n');
     const raw = lines[info.lineStart]?.replace(/\r$/, '');
-    // Exact whole-paragraph equality excludes entities, escapes and rendered Markdown.
-    if (raw !== node.nodeValue) throw new Error(help);
+    const projection = projectReadingParagraph(raw);
+    if (!projection) throw new Error('此段含有复杂格式，请切换到编辑视图标注。');
     const lineOffset = lines.slice(0, info.lineStart).reduce((offset, line) => offset + line.length + 1, 0);
-    const from = lineOffset + Math.min(selection.anchorOffset, selection.focusOffset);
-    const to = lineOffset + Math.max(selection.anchorOffset, selection.focusOffset);
-    validateSelection({ document: snapshot, from, to });
-    return { view, editor: view.editor, filePath: view.file.path, snapshot, from, to, reading: true };
+    return { snapshot, projection, lineOffset };
   }
-
-  capture() {
-    const view = this.currentView();
-    return view.getMode() === 'preview' ? this.captureReading(view) : this.captureEditor(view.editor, view);
+  captureReading(view) {
+    const doc = view.containerEl.ownerDocument;
+    const selection = doc.getSelection();
+    if (!selection || selection.isCollapsed || !view.contentEl.contains(selection.anchorNode) || !view.contentEl.contains(selection.focusNode)) throw new Error('请先选中笔记中的普通文字，再添加标注。');
+    const range = selection.getRangeAt(0), paragraph = range.startContainer.parentElement?.closest('p');
+    if (!paragraph || !paragraph.contains(range.endContainer)) throw new Error('请只选择同一段中的普通文字。');
+    const { snapshot, projection, lineOffset } = this.readingSection(view, paragraph);
+    const nodes = [], walker = doc.createTreeWalker(paragraph, 4);
+    let node, text = '', position = 0, from = null, to = null;
+    while ((node = walker.nextNode())) {
+      if (node.parentElement?.closest('sup.footnote-ref, .footnote-ref')) continue;
+      nodes.push(node);
+      if (node === range.startContainer) from = position + range.startOffset;
+      if (node === range.endContainer) to = position + range.endOffset;
+      text += node.nodeValue; position += node.nodeValue.length;
+    }
+    if (text !== projection.text || from === null || to === null || from >= to) throw new Error('此选区含有复杂格式，请切换到编辑视图标注。');
+    const sourceFrom = lineOffset + projection.starts[from], sourceTo = lineOffset + projection.ends[to - 1];
+    validateSelection({ document: snapshot, from: sourceFrom, to: sourceTo });
+    const annotation = this.recordsFor(snapshot, view.file.path).find(record => sourceFrom >= record.contentFrom && sourceTo <= record.contentTo);
+    return { view, editor: view.editor, filePath: view.file.path, snapshot, from: sourceFrom, to: sourceTo, annotation, reading: true };
   }
-
-  openAnnotation(capture = null, kind = 'highlight') {
-    try { new AnnotationModal(this, capture || this.capture(), kind).open(); }
+  capture() { const view = this.currentView(); return view.getMode() === 'preview' ? this.captureReading(view) : this.captureEditor(view.editor, view); }
+  openAnnotation(capture = null, kind) {
+    try { this.hideToolbars(); new AnnotationModal(this, capture || this.capture(), kind).open(); }
     catch (error) { new Notice(error.message); }
   }
-
+  editAnnotation(from, context = this.getAnnotationContext()) {
+    try {
+      if (!context) throw new Error('请先打开一篇 Markdown 笔记。');
+      this.assertCurrent(context);
+      const annotation = this.recordsFor(context.snapshot, context.filePath).find(record => record.from === from);
+      if (!annotation) throw new Error('标注已发生变化，请重新选择。');
+      this.openAnnotation({ ...context, editor: context.view.editor, from: annotation.contentFrom, to: annotation.contentTo, annotation, reading: context.view.getMode() === 'preview' });
+    } catch (error) { new Notice(error.message); }
+  }
+  async removeAnnotation(from, context = this.getAnnotationContext()) {
+    try {
+      if (!context) throw new Error('请先打开一篇 Markdown 笔记。');
+      this.assertCurrent(context);
+      const plan = buildRemoveAnnotationPlan({ document: context.snapshot, from });
+      await this.applyPlan(context, plan); this.hideToolbars();
+    } catch (error) { new Notice(error.message); throw error; }
+  }
   async quickUnderline(capture = null) {
     try { await this.commit(capture || this.capture(), { kind: 'underline' }); }
     catch (error) { new Notice(error.message); }
   }
-
   async quickHighlight(color) {
     try { await this.commit(this.capture(), { kind: 'highlight', color }); }
     catch (error) { new Notice(error.message); }
   }
-
   assertCurrent(capture) {
     if (!this.active) throw new Error('标注插件已关闭。');
-    if (this.app.workspace.getActiveViewOfType(MarkdownView) !== capture.view || capture.view.file?.path !== capture.filePath) throw new Error('当前笔记已切换，请关闭面板后重新选择文字。');
+    if (this.currentView() !== capture.view || capture.view.file?.path !== capture.filePath) throw new Error('当前笔记已切换，请关闭面板后重新选择文字。');
     const text = capture.view.getMode() === 'preview' ? capture.view.getViewData() : capture.view.editor.getValue();
     if (text !== capture.snapshot) throw new Error('笔记已发生变化，请关闭面板后重新选择文字。');
   }
-
   async inEditor(view, work) {
-    const state = view.leaf.getViewState();
-    const reading = view.getMode() === 'preview';
+    const state = view.leaf.getViewState(), reading = view.getMode() === 'preview';
     if (reading) await view.leaf.setViewState({ ...state, state: { ...state.state, mode: 'source' } });
     try { return await work(view.editor); }
-    finally {
-      if (reading && view.file?.path === state.state?.file) await view.leaf.setViewState(state);
-    }
+    finally { if (reading && view.file?.path === state.state?.file) await view.leaf.setViewState(state); }
   }
-
-  async commit(capture, options) {
+  async applyPlan(capture, plan) {
     this.assertCurrent(capture);
-    const plan = buildAnnotationPlan({ document: capture.snapshot, from: capture.from, to: capture.to, ...options });
     const after = applyChanges(capture.snapshot, plan.changes);
     await this.inEditor(capture.view, editor => {
       this.assertCurrent(capture);
@@ -264,7 +454,16 @@ module.exports = class InkstoneAnnotations extends Plugin {
       this.lastAction = { view: capture.view, filePath: capture.filePath, before: capture.snapshot, after };
     });
   }
-
+  async commit(capture, options) {
+    this.assertCurrent(capture);
+    const plan = capture.annotation
+      ? buildEditAnnotationPlan({ document: capture.snapshot, from: capture.annotation.from, ...options })
+      : buildAnnotationPlan({ document: capture.snapshot, from: capture.from, to: capture.to, ...options });
+    await this.applyPlan(capture, plan);
+    this.settings.lastKind = options.kind === 'highlight' ? 'highlight' : 'underline';
+    if (options.color) this.settings.lastColor = options.color;
+    this.hideToolbars(); await this.saveData(this.settings);
+  }
   async undoAnnotation() {
     const action = this.lastAction;
     if (!action) return;
@@ -278,6 +477,55 @@ module.exports = class InkstoneAnnotations extends Plugin {
         if (editor.getValue() !== action.before) throw new Error('撤销历史已变化，请在编辑视图中检查撤销结果。');
       });
       this.lastAction = null;
+    } catch (error) { new Notice(error.message); }
+  }
+  async revealAnnotation(from, context = this.getAnnotationContext()) {
+    try {
+      if (!context) return;
+      this.assertCurrent(context);
+      this.app.workspace.setActiveLeaf(context.view.leaf, { focus: true });
+      if (context.view.getMode() === 'preview') {
+        const node = [...context.view.contentEl.querySelectorAll(`[data-inkstone-from="${from}"]`)].find(candidate => {
+          const rendered = this.readingTargets.get(candidate);
+          return rendered?.filePath === context.filePath && rendered.snapshot === context.snapshot && rendered.from === from && candidate.textContent === rendered.text;
+        });
+        if (node) { node.scrollIntoView({ block: 'center', behavior: 'instant' }); node.focus({ preventScroll: true }); return; }
+      }
+      await this.inEditor(context.view, editor => {
+        this.assertCurrent(context);
+        const pos = editor.offsetToPos(from); editor.setCursor(pos); editor.scrollIntoView({ from: pos, to: pos }, true);
+      });
+    } catch (error) { new Notice(error.message); }
+  }
+  async exportAnnotations() {
+    try {
+      const context = this.getAnnotationContext();
+      if (!context?.records.length) throw new Error('当前笔记还没有墨读标注。');
+      this.assertCurrent(context);
+      const file = context.view.file;
+      const folder = file.parent?.path && file.parent.path !== '/' ? file.parent.path + '/' : '';
+      const base = `${folder}${file.basename}-墨读摘录`;
+      let path = `${base}.md`, sequence = 2;
+      while (this.app.vault.getAbstractFileByPath(path)) path = `${base}-${sequence++}.md`;
+      const link = this.app.fileManager.generateMarkdownLink(file, path, '', '原文');
+      const lines = [`# ${file.basename} · 墨读摘录`, '', `来源：${link}`, ''];
+      for (const [index, record] of context.records.entries()) {
+        const label = record.kind === 'underline' ? '下划线' : PALETTE.find(([color]) => color === record.color)?.[1] || '高亮';
+        const literal = record.text.replace(/[\\`*_{}\[\]()#+.!<>|~=$&-]/g, character => '\\' + character);
+        lines.push(`## ${index + 1}. ${label}`, '', ...literal.split(/\r\n|\r|\n/).map(line => `> ${line}`), '');
+        if (record.note) lines.push('备注：', '', record.note, '');
+      }
+      const exported = await this.app.vault.create(path, lines.join('\n'));
+      await this.app.workspace.getLeaf('tab').openFile(exported);
+    } catch (error) { new Notice(error.message); }
+  }
+  turnPage(direction) {
+    try {
+      const view = this.currentView();
+      const scroller = view.getMode() === 'preview' ? view.contentEl.querySelector('.markdown-preview-view') : view.contentEl.querySelector('.cm-scroller');
+      if (!scroller) return;
+      const distance = Math.max(1, scroller.clientHeight - Math.min(80, scroller.clientHeight * 0.15));
+      scroller.scrollTo({ top: Math.max(0, Math.min(scroller.scrollTop + direction * distance, scroller.scrollHeight - scroller.clientHeight)), left: scroller.scrollLeft, behavior: 'instant' });
     } catch (error) { new Notice(error.message); }
   }
 };
