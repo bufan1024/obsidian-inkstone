@@ -60,7 +60,7 @@ function setup() {
     app,
     getAnnotationContext: () => context,
     revealAnnotation: (...args) => calls.push(['reveal', ...args]),
-    editAnnotation: (...args) => calls.push(['edit', ...args]),
+    showSidebarAnnotationMenu: (...args) => calls.push(['edit-menu', ...args]),
     removeAnnotation: (...args) => calls.push(['remove', ...args]),
     exportAnnotations: () => calls.push(['export']),
   };
@@ -98,15 +98,18 @@ test('card actions keep their rendered context instead of attaching old offsets 
   await fixture.view.onOpen();
   fixture.setContext({ ...renderedContext, snapshot: '已被修改的正文', records: [] });
   button(fixture.view, '定位原文').dispatchEvent(new Event('click'));
-  button(fixture.view, '编辑').dispatchEvent(new Event('click'));
+  const edit = button(fixture.view, '编辑');
+  edit.dispatchEvent(new Event('click'));
   button(fixture.view, '删除').dispatchEvent(new Event('click'));
   button(fixture.view, '导出摘录').dispatchEvent(new Event('click'));
   assert.equal(fixture.calls.length, 4);
-  for (const [index, action] of ['reveal', 'edit', 'remove'].entries()) {
+  for (const [index, action] of ['reveal', 'edit-menu', 'remove'].entries()) {
     assert.equal(fixture.calls[index][0], action);
     assert.equal(fixture.calls[index][1], 10);
     assert.equal(fixture.calls[index][2], renderedContext);
   }
+  assert.equal(fixture.calls[1][3], edit);
+  assert.equal(edit.attributes['aria-haspopup'], 'dialog');
   assert.equal(fixture.calls[3][0], 'export');
 });
 
@@ -155,4 +158,15 @@ test('refreshing the same note keeps list position while filtering and changing 
   await fixture.view.onClose();
   await fixture.view.onOpen();
   assert.equal(list().scrollTop, 0);
+});
+
+test('activating the sidebar preserves its buttons while source edits still refresh them', async () => {
+  const fixture = setup();
+  await fixture.view.onOpen();
+  const edit = button(fixture.view, '编辑');
+  fixture.workspace.emit('active-leaf-change', {view: fixture.view});
+  assert.equal(button(fixture.view, '编辑'), edit);
+  fixture.setContext({...fixture.context, snapshot: '更新正文'});
+  fixture.workspace.emit('editor-change');
+  assert.notEqual(button(fixture.view, '编辑'), edit);
 });

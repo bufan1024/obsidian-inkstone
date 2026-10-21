@@ -10,7 +10,7 @@ function pluginFixture(text = '<u class="inkstone-underline">宿主原文</u>') 
   const sandbox = { module: { exports: {} }, annotationCore: core, annotationViews: { VIEW_TYPE: 'inkstone-annotations-list' },
     annotationMenu: { createAnnotationMenu(options) {
       builtMenus.push(options);
-      return { ownerDocument: options.doc, isConnected: true, addEventListener() {}, remove() { this.isConnected = false; } };
+      return { ownerDocument: options.doc, isConnected: true, addEventListener() {}, querySelector() { return null; }, remove() { this.isConnected = false; } };
     } },
     require(name) { assert.equal(name, 'obsidian'); return { Plugin: class {}, Modal: class { open() { openedModals.push(this); } }, PluginSettingTab: class {}, MarkdownView, Notice: class { constructor(message) { notices.push(message); } } }; } };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/plugin.cjs'), 'utf8'), sandbox);
@@ -45,8 +45,110 @@ function pluginFixture(text = '<u class="inkstone-underline">宿主原文</u>') 
     assert.equal(builtMenus.length, 1);
     return builtMenus[0];
   };
-  return {plugin, view, node, render, click, calls, notices, openedModals, openMenu, openIdea, setText: value => { text = value; }};
+  return {plugin, view, node, render, click, calls, notices, openedModals, builtMenus, openMenu, openIdea, setText: value => { text = value; }};
 }
+
+function sidebarAnchor(fixture) {
+  const doc = fixture.view.containerEl.ownerDocument;
+  const anchor = { ownerDocument: doc, isConnected: true, matches: selector => selector === 'button', getBoundingClientRect: () => ({left: 600, top: 200, bottom: 230, width: 50, height: 30}), focus() {} };
+  const contentEl = { ownerDocument: doc, contains: element => element === anchor };
+  const leaf = {view: {contentEl, getViewType: () => 'inkstone-annotations-list'}};
+  const leaves = fixture.plugin.app.workspace.getLeavesOfType;
+  fixture.plugin.app.workspace.getLeavesOfType = type => type === 'inkstone-annotations-list' ? [leaf] : leaves(type);
+  return anchor;
+}
+
+test('sidebar edit opens the shared menu at its own button with current style and idea', () => {
+  const fixture = pluginFixture('<mark class="inkstone-highlight inkstone-green">侧栏原文</mark>[^inkstone-1]\n\n[^inkstone-1]: 已有想法');
+  const anchor = sidebarAnchor(fixture), positions = [];
+  fixture.view.contentEl.contains = () => false;
+  fixture.plugin.positionToolbar = (_menu, capture, rect) => positions.push({capture, rect});
+  fixture.plugin.showSidebarAnnotationMenu(0, fixture.plugin.getAnnotationContext(), anchor);
+  assert.equal(fixture.builtMenus.length, 1);
+  const options = fixture.builtMenus[0];
+  assert.equal(options.record.color, 'green');
+  assert.equal(options.record.note, '已有想法');
+  assert.equal(options.startComposer, false);
+  assert.deepEqual(positions[0].rect, anchor.getBoundingClientRect());
+  assert.equal(positions[0].capture.view, fixture.view);
+  assert.equal(positions[0].capture.snapshot, fixture.view.getViewData());
+  assert.equal(fixture.openedModals.length, 0);
+  let focused = false;
+  anchor.focus = () => { focused = true; };
+  options.onClose();
+  assert.equal(focused, true);
+  assert.equal(fixture.plugin.toolbars.size, 0);
+});
+
+test('sidebar menu rejects stale content and disconnected, foreign or unregistered buttons', () => {
+  for (const failure of ['stale', 'switched-file', 'closed-plugin', 'detached', 'other-document', 'other-sidebar-document', 'not-button', 'unregistered']) {
+    const fixture = pluginFixture(), anchor = sidebarAnchor(fixture), context = fixture.plugin.getAnnotationContext();
+    fixture.plugin.positionToolbar = () => {};
+    if (failure === 'stale') fixture.setText('原文已改变');
+    if (failure === 'switched-file') fixture.view.file = {path: 'other.md'};
+    if (failure === 'closed-plugin') fixture.plugin.active = false;
+    if (failure === 'detached') anchor.isConnected = false;
+    if (failure === 'other-document') anchor.ownerDocument = {};
+    if (failure === 'other-sidebar-document') fixture.plugin.app.workspace.getLeavesOfType = type => type === 'markdown' ? [fixture.view.leaf] : [{view: {contentEl: {ownerDocument: {}, contains: () => true}}}];
+    if (failure === 'not-button') anchor.matches = () => false;
+    if (failure === 'unregistered') fixture.plugin.app.workspace.getLeavesOfType = type => type === 'markdown' ? [fixture.view.leaf] : [];
+    fixture.plugin.showSidebarAnnotationMenu(0, context, anchor);
+    assert.equal(fixture.builtMenus.length, 0, failure);
+    assert.equal(fixture.openedModals.length, 0, failure);
+    assert.equal(fixture.notices.length, 1, failure);
+  }
+});
+
+test('all sidebar-menu writes revalidate the captured note before invoking mutations', async () => {
+  const fixture = pluginFixture(), anchor = sidebarAnchor(fixture), writes = [];
+  fixture.plugin.positionToolbar = () => {};
+  fixture.plugin.showSidebarAnnotationMenu(0, fixture.plugin.getAnnotationContext(), anchor);
+  assert.equal(fixture.builtMenus.length, 1);
+  const options = fixture.builtMenus[0];
+  fixture.plugin.commit = async () => writes.push('commit');
+  fixture.plugin.removeAnnotation = async () => writes.push('remove');
+  fixture.setText('原文已被用户修改');
+  await assert.rejects(() => options.onStyle({kind: 'highlight', color: 'blue'}), /变化/);
+  await assert.rejects(() => options.onSaveNote('新想法', {kind: 'underline'}), /变化/);
+  await assert.rejects(() => options.onDelete(), /变化/);
+  assert.deepEqual(writes, []);
+});
+
+test('a delayed activation of the sidebar that opened a menu keeps that same menu', () => {
+  const fixture = pluginFixture(), anchor = sidebarAnchor(fixture);
+  fixture.plugin.positionToolbar = () => {};
+  fixture.plugin.showSidebarAnnotationMenu(0, fixture.plugin.getAnnotationContext(), anchor);
+  const doc = anchor.ownerDocument, menu = fixture.plugin.toolbars.get(doc);
+  const sidebar = fixture.plugin.app.workspace.getLeavesOfType('inkstone-annotations-list')[0];
+  fixture.plugin.app.workspace.activeLeaf = sidebar;
+  fixture.plugin.app.workspace.getActiveViewOfType = () => null;
+  fixture.plugin.lastMarkdownView = fixture.view;
+  fixture.plugin.handleActiveLeafChange(sidebar);
+  assert.equal(fixture.plugin.toolbars.get(doc), menu);
+  assert.equal(menu.isConnected, true);
+  fixture.plugin.app.workspace.activeLeaf = fixture.view.leaf;
+  fixture.plugin.app.workspace.getActiveViewOfType = () => fixture.view;
+  fixture.plugin.handleActiveLeafChange(fixture.view.leaf);
+  assert.equal(fixture.plugin.toolbars.size, 0);
+});
+
+test('sidebar activation still closes a menu with stale content, a detached anchor or a different leaf', () => {
+  for (const failure of ['stale', 'detached', 'different-sidebar', 'no-longer-active']) {
+    const fixture = pluginFixture(), anchor = sidebarAnchor(fixture);
+    fixture.plugin.positionToolbar = () => {};
+    fixture.plugin.showSidebarAnnotationMenu(0, fixture.plugin.getAnnotationContext(), anchor);
+    const sidebar = fixture.plugin.app.workspace.getLeavesOfType('inkstone-annotations-list')[0];
+    fixture.plugin.app.workspace.activeLeaf = sidebar;
+    fixture.plugin.app.workspace.getActiveViewOfType = () => null;
+    fixture.plugin.lastMarkdownView = fixture.view;
+    if (failure === 'stale') fixture.setText('原文已变化');
+    if (failure === 'detached') anchor.isConnected = false;
+    if (failure === 'different-sidebar') sidebar.view.contentEl = {ownerDocument: anchor.ownerDocument, contains: () => false};
+    if (failure === 'no-longer-active') fixture.plugin.app.workspace.activeLeaf = {view: {getViewType: () => 'empty'}};
+    fixture.plugin.handleActiveLeafChange(sidebar);
+    assert.equal(fixture.plugin.toolbars.size, 0, failure);
+  }
+});
 
 test('clicking an annotation embedded from another note never edits the host note', () => {
   const fixture=pluginFixture();

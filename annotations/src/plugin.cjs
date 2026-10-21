@@ -140,7 +140,7 @@ module.exports = class InkstoneAnnotations extends Plugin {
     });
     this.bindDocument(document);
     this.registerEvent(this.app.workspace.on('window-open', (_window, win) => this.bindDocument(win.document)));
-    this.registerEvent(this.app.workspace.on('active-leaf-change', () => { this.rememberMarkdownView(); this.hideToolbars(); }));
+    this.registerEvent(this.app.workspace.on('active-leaf-change', leaf => this.handleActiveLeafChange(leaf)));
     this.registerEvent(this.app.workspace.on('editor-change', () => {
       this.hideToolbars(); this.scheduleToolbar(this.currentDocument());
     }));
@@ -191,6 +191,17 @@ module.exports = class InkstoneAnnotations extends Plugin {
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (view) this.lastMarkdownView = view;
     return view;
+  }
+  handleActiveLeafChange(leaf) {
+    this.rememberMarkdownView();
+    const content = leaf?.view?.getViewType?.() === annotationViews.VIEW_TYPE ? leaf.view.contentEl : null;
+    const doc = content?.ownerDocument;
+    const state = doc && this.toolbarStates.get(doc);
+    if (this.app.workspace.activeLeaf === leaf && state?.anchor?.isConnected && content.contains(state.anchor) && this.toolbars.get(doc)?.isConnected) {
+      // Obsidian can emit sidebar activation after its edit button has opened a menu.
+      try { this.assertCurrent(state.capture); return; } catch {}
+    }
+    this.hideToolbars();
   }
   currentView() {
     const active = this.rememberMarkdownView();
@@ -517,6 +528,21 @@ module.exports = class InkstoneAnnotations extends Plugin {
       this.showAnnotationPopover(capture, annotation, rect, { anchor, focusFirst });
     } catch (error) { new Notice(error.message); }
   }
+  showSidebarAnnotationMenu(from, context, anchor) {
+    try {
+      if (!context) throw new Error('请先打开一篇 Markdown 笔记。');
+      this.assertCurrent(context);
+      const annotation = this.recordsFor(context.snapshot, context.filePath).find(record => record.from === from);
+      if (!annotation) throw new Error('标注已发生变化，请重新点击。');
+      const doc = context.view.containerEl.ownerDocument;
+      if (!anchor?.isConnected || anchor.ownerDocument !== doc || !anchor.matches?.('button') ||
+          !this.app.workspace.getLeavesOfType(annotationViews.VIEW_TYPE).some(leaf => leaf.view.contentEl?.ownerDocument === doc && leaf.view.contentEl.contains(anchor))) {
+        throw new Error('标注列表正在更新，请重新点击「编辑」。');
+      }
+      const capture = { ...context, editor: context.view.editor, from: annotation.contentFrom, to: annotation.contentTo, annotation, reading: context.view.getMode() === 'preview' };
+      this.showAnnotationPopover(capture, annotation, anchor.getBoundingClientRect(), { anchor, focusFirst: true });
+    } catch (error) { new Notice(error.message); }
+  }
   showSelectionIdea(capture, rect, text) {
     try {
       this.assertCurrent(capture);
@@ -527,7 +553,7 @@ module.exports = class InkstoneAnnotations extends Plugin {
   showAnnotationPopover(capture, record, rect, { anchor, focusFirst = false, startComposer = false } = {}) {
     const doc = capture.view.containerEl.ownerDocument;
     this.hideToolbars();
-    this.toolbarStates.set(doc, { capture, dismissed: true });
+    this.toolbarStates.set(doc, { capture, dismissed: true, anchor });
     const timer = this.toolbarTimers.get(doc);
     if (timer) { doc.defaultView.clearTimeout(timer); this.toolbarTimers.delete(doc); }
     let menu;

@@ -59,7 +59,9 @@ const results = [];
         }, expected);
       }
     };
-    const data=()=>page.evaluate(()=>app.workspace.getLeaf(false).view.getViewData());
+    // getLeaf(false) activates Markdown when a sidebar is active, so reads must
+    // use the plugin's non-activating current-view lookup while testing popovers.
+    const data=()=>page.evaluate(()=>app.plugins.plugins['inkstone-annotations'].currentView().getViewData());
     const rememberScope=()=>page.evaluate(()=>{
       const current=app.keymap.windowScopes.get(window);
       window.__inkstoneQaSavedScope={scope:current.scope,prevScopes:[...current.prevScopes]};
@@ -70,7 +72,7 @@ const results = [];
       return current.scope===saved.scope&&current.prevScopes.length===saved.prevScopes.length&&current.prevScopes.every((scope,index)=>scope===saved.prevScopes[index]);
     },active),true,active?'The thought composer should own a temporary keyboard scope':'Closing the thought composer should restore the exact previous keyboard scope');
     const spyTransactions=()=>page.evaluate(()=>{
-      const editor=app.workspace.getLeaf(false).view.editor,transaction=editor.transaction;
+      const editor=app.plugins.plugins['inkstone-annotations'].currentView().editor,transaction=editor.transaction;
       window.__inkstoneQaTransaction={editor,transaction,count:0};
       editor.transaction=function(...args){if(args[1]==='inkstone-annotation')window.__inkstoneQaTransaction.count++;return transaction.apply(this,args);};
     });
@@ -485,8 +487,9 @@ const results = [];
       await sidebar.getByLabel('筛选标注颜色').selectOption('blue');
       assert.equal(await sidebar.locator('.inkstone-annotation-card').count(),1);
       await sidebar.getByRole('button',{name:'编辑',exact:true}).click();
-      await page.locator('.inkstone-annotation-modal').waitFor();
-      await page.getByRole('button',{name:'取消',exact:true}).click();
+      assert.equal(await page.locator('.inkstone-annotation-modal').count(),0,'Sidebar edit should open the compact annotation menu beside its button');
+      await page.locator('.inkstone-annotation-menu').waitFor();
+      await page.keyboard.press('Escape');
       await sidebar.getByLabel('筛选标注颜色').selectOption('underline');
       assert((await sidebar.locator('.inkstone-annotation-card').textContent()).includes('下划线观点'));
       await sidebar.getByRole('button',{name:'定位原文',exact:true}).click();
@@ -507,6 +510,65 @@ const results = [];
       assert.equal(await page.getByRole('button',{name:'绿色',exact:true}).getAttribute('aria-pressed'),'true');
       await page.getByRole('button',{name:'取消',exact:true}).click();
       await page.setViewportSize({width:1440,height:1000});
+    });
+    await run('sidebar-edit-compact-menu',async()=>{
+      const original='<mark class="inkstone-highlight inkstone-green">从侧栏编辑的观点</mark>[^inkstone-1]\n\n光标在这里。\n\n[^inkstone-1]: 原有想法\n';
+      for(const mode of ['preview','live-preview','source']) {
+        await fixture(original,mode==='preview'?'preview':'source');
+        if(mode==='source')await page.evaluate(async()=>{const leaf=app.workspace.getLeaf(false),state=leaf.getViewState();await leaf.setViewState({...state,state:{...state.state,source:true}});});
+        if(mode!=='preview')await page.waitForFunction(live=>Boolean(app.workspace.getLeaf(false).view.contentEl.querySelector('.markdown-source-view.is-live-preview'))===live,mode==='live-preview');
+        await command('show-annotations');
+        const sidebar=page.locator('.inkstone-annotation-sidebar');await sidebar.getByLabel('筛选标注颜色').selectOption('all');await sidebarWidth(360);
+        // The first edit click must also work when it activates an unfocused sidebar.
+        await page.evaluate(()=>{const leaf=app.workspace.getLeaf(false);app.workspace.setActiveLeaf(leaf,{focus:true});});
+        await sidebar.getByRole('button',{name:'编辑',exact:true}).click();
+        const menu=page.locator('.inkstone-annotation-menu');await menu.waitFor();
+        assert.equal(await page.locator('.inkstone-annotation-modal').count(),0,mode+' sidebar editing should avoid the full modal');
+        assert.equal(await menu.getByRole('button',{name:'绿色',exact:true}).getAttribute('aria-pressed'),'true');assert.equal(await menu.locator('.inkstone-annotation-menu-note').textContent(),'原有想法');
+        await menu.getByRole('button',{name:'蓝色',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
+        assert((await data()).includes('inkstone-blue'));assert((await data()).includes('[^inkstone-1]: 原有想法'));
+        await page.evaluate(()=>{const leaf=app.workspace.getLeavesOfType('inkstone-annotations-list')[0];app.workspace.setActiveLeaf(leaf,{focus:true});});
+        await sidebar.getByRole('button',{name:'编辑',exact:true}).click();await menu.waitFor();
+        assert.equal(await menu.getByRole('button',{name:'蓝色',exact:true}).getAttribute('aria-pressed'),'true');await rememberScope();
+        await menu.getByRole('button',{name:'编辑想法',exact:true}).click();await assertScope(true);
+        const input=menu.getByRole('textbox',{name:'想法内容',exact:true});assert.equal(await input.inputValue(),'原有想法');
+        const beforeCancel=await data();await input.fill('尚未保存的侧栏草稿');await menu.getByRole('button',{name:'粉色',exact:true}).click();await menu.getByRole('button',{name:'取消',exact:true}).click();await assertScope(false);
+        assert.equal(await data(),beforeCancel);assert.equal(await menu.getByRole('button',{name:'蓝色',exact:true}).getAttribute('aria-pressed'),'true');
+        await menu.getByRole('button',{name:'编辑想法',exact:true}).click();await assertScope(true);await input.fill('从'+mode+'侧栏保存的想法');await spyTransactions();
+        try{
+          await input.press(process.platform==='darwin'?'Meta+Enter':'Control+Enter');await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));await assertScope(false);
+          const text=await data();assert(text.includes('<mark class="inkstone-highlight inkstone-rose">从侧栏编辑的观点</mark>[^inkstone-1]'));assert(text.includes('从'+mode+'侧栏保存的想法'));assert.equal(await transactionCount(),1);
+          assert.equal(await page.evaluate(()=>app.workspace.getLeaf(false).view.getMode()),mode==='preview'?'preview':'source');
+        }finally{await restoreTransactions();}
+        if(mode==='source') {
+          await sidebar.getByRole('button',{name:'编辑',exact:true}).click();await menu.waitFor();
+          await menu.getByRole('button',{name:'删除标注',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));
+          const text=await data();assert(text.includes('从侧栏编辑的观点'),'Deleting a sidebar annotation must keep its original text');assert(!text.includes('inkstone-'));assert.equal(await sidebar.locator('.inkstone-annotation-card').count(),0);
+        }
+      }
+    });
+    await run('sidebar-edit-anchor-keyboard-and-safety',async()=>{
+      await longSidebarFixture();await command('show-annotations');
+      const sidebar=page.locator('.inkstone-annotation-sidebar'),menu=page.locator('.inkstone-annotation-menu');await sidebar.getByLabel('筛选标注颜色').selectOption('all');await sidebarWidth(360);
+      const scrollBefore=await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>{node.scrollTop=600;return node.scrollTop;});
+      const visibleIndex=await sidebar.evaluate(node=>{const list=node.querySelector('.inkstone-annotation-sidebar-list'),bounds=list.getBoundingClientRect();return[...list.querySelectorAll('.inkstone-annotation-card')].findIndex(card=>{const rect=card.getBoundingClientRect();return rect.top>=bounds.top&&rect.bottom<=bounds.bottom;});});assert(visibleIndex>=0);
+      const edit=sidebar.locator('.inkstone-annotation-card').nth(visibleIndex).getByRole('button',{name:'编辑',exact:true});await edit.focus();await edit.evaluate(node=>{window.__inkstoneQaSidebarAnchor=node;});await rememberScope();
+      await edit.press('Space');await menu.waitFor();assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'黄色');
+      const anchor=await edit.boundingBox(),bounds=await menu.boundingBox(),gap=Math.min(Math.abs(bounds.y+bounds.height-anchor.y),Math.abs(bounds.y-anchor.y-anchor.height));assert(gap>=4&&gap<=24,'The sidebar menu should sit beside its actual edit button');
+      assert(Math.abs(await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>node.scrollTop)-scrollBefore)<=1);
+      await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));await assertScope(false);assert.equal(await page.evaluate(()=>document.activeElement===window.__inkstoneQaSidebarAnchor),true);
+      await edit.press('Enter');await menu.waitFor();await menu.getByRole('button',{name:'编辑想法',exact:true}).click();await assertScope(true);const input=menu.getByRole('textbox',{name:'想法内容',exact:true}),original=await data();await input.fill('Escape 不保存的草稿');await input.press('Escape');await assertScope(false);assert.equal(await data(),original);
+      await edit.click();await menu.waitFor();await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>{node.scrollTop+=40;});await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));assert.equal(await data(),original);
+      await page.evaluate(()=>app.workspace.leftSplit.collapse());await page.setViewportSize({width:390,height:844});
+      try{
+        await sidebarWidth(240);await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>{node.scrollTop=0;});
+        await sidebar.locator('.inkstone-annotation-card').first().getByRole('button',{name:'编辑',exact:true}).click();await menu.waitFor();const box=await menu.boundingBox();assert(box.x>=0&&box.x+box.width<=390&&box.y>=0&&box.y+box.height<=844);assert.equal(await page.locator('.inkstone-annotation-modal').count(),0);await rememberScope();
+        await menu.getByRole('button',{name:'编辑想法',exact:true}).click();await assertScope(true);await input.fill('窄屏中过期的侧栏草稿');const updated=original+'\n外部编辑新增内容。\n';
+        await page.evaluate(updated=>{const view=app.workspace.getLeaf(false).view,save=document.querySelector('.inkstone-annotation-menu [aria-label="保存想法"]');view.setViewData(updated,false);if(view.getViewData()!==updated)throw Error('QA snapshot update failed');save.click();},updated);
+        await page.waitForFunction(()=>document.querySelector('.inkstone-annotation-menu-error')?.textContent||!document.querySelector('.inkstone-annotation-menu'));assert.equal(await data(),updated,'An old sidebar menu must not write through a newer source snapshot');
+        if(await menu.count())await page.keyboard.press('Escape');await assertScope(false);
+        const newer=updated+'\n侧栏重绘后也不能调用旧编辑按钮。\n';await page.evaluate(newer=>{const view=app.workspace.getLeaf(false).view,stale=document.querySelector('.inkstone-annotation-card-actions [type="button"]:nth-child(2)');view.setViewData(newer,false);stale.click();},newer);assert.equal(await data(),newer);assert.equal(await menu.count(),0);assert.equal(await page.locator('.inkstone-annotation-modal').count(),0);
+      }finally{await page.setViewportSize({width:1440,height:1000});await sidebarWidth(360);await page.evaluate(()=>{delete window.__inkstoneQaSidebarAnchor;});}
     });
 
     const selectEditorText=async text=>{
@@ -564,14 +626,18 @@ const results = [];
         await page.waitForFunction(()=>!app.workspace.getLeaf(false).view.contentEl.querySelector('.markdown-source-view.is-live-preview'));
       }
       if(mode==='preview') {
-        await page.evaluate(needle=>{
-          const paragraph=app.workspace.getLeaf(false).view.contentEl.querySelector('.markdown-preview-view p'),walker=document.createTreeWalker(paragraph,4);let node;
+        // The narrow reading renderer can replace a paragraph during layout;
+        // wait for the actual selectable text and capture it in the same frame.
+        await page.waitForFunction(needle=>{
+          const paragraph=app.plugins.plugins['inkstone-annotations'].currentView().contentEl.querySelector('.markdown-preview-view p');
+          if(!paragraph)return false;
+          const walker=document.createTreeWalker(paragraph,4);let node;
           while((node=walker.nextNode())) {
             const at=node.nodeValue.indexOf(needle);if(at<0)continue;
             const range=document.createRange();range.setStart(node,at);range.setEnd(node,at+needle.length);
-            const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);return;
+            const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);return true;
           }
-          throw Error('Visible selection missing: '+needle);
+          return false;
         },needle);
         await page.locator('.inkstone-selection-toolbar:not(.inkstone-annotation-menu)').waitFor();
       }else await selectEditorText(needle);

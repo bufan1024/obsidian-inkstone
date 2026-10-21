@@ -29,7 +29,8 @@ function createSidebarClass(plugin) {
       this.contentEl.classList.add('inkstone-annotation-sidebar');
       this.listen(this.app.workspace, 'active-leaf-change', leaf => {
         const type = leaf?.view?.getViewType?.();
-        if (type && type !== VIEW_TYPE) this.nonMarkdownActive = type !== 'markdown';
+        if (type === VIEW_TYPE) return;
+        if (type) this.nonMarkdownActive = type !== 'markdown';
         if (leaf === null) this.nonMarkdownActive = true;
         this.render();
       });
@@ -141,11 +142,15 @@ function createSidebarClass(plugin) {
           add(thought, 'p', record.note, 'inkstone-annotation-card-note');
         }
         const actions = add(card, 'div', undefined, 'inkstone-annotation-card-actions');
-        for (const [title, method] of [['定位原文', 'revealAnnotation'], ['编辑', 'editAnnotation'], ['删除', 'removeAnnotation']]) {
+        for (const [title, method] of [['定位原文', 'revealAnnotation'], ['编辑', 'showSidebarAnnotationMenu'], ['删除', 'removeAnnotation']]) {
           const action = add(actions, 'button', title);
           action.setAttribute('type', 'button');
           if (method === 'removeAnnotation') action.className = 'inkstone-annotation-card-delete';
-          action.addEventListener('click', () => this.perform(() => plugin[method](record.from, context)));
+          if (method === 'showSidebarAnnotationMenu') action.setAttribute('aria-haspopup', 'dialog');
+          const run = () => method === 'showSidebarAnnotationMenu'
+            ? plugin.showSidebarAnnotationMenu(record.from, context, action)
+            : plugin[method](record.from, context);
+          action.addEventListener('click', () => this.perform(run));
         }
       }
       list.scrollTop = scrollTop;

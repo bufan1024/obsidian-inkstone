@@ -33,4 +33,6 @@ INKSTONE_CDP=http://127.0.0.1:19227 node tests/native/verify-upgrade.cjs
 
 侧栏另有 `sidebar-responsive-layout`、`sidebar-empty-states`、`sidebar-refresh-scroll-and-stale-actions` 三组回归，覆盖 240／280／360／480px 宽度下的长路径与内容、固定顶部与列表滚动、原生按钮样式与焦点、粗指针尺寸、三种空态、刷新和删除后保留滚动位置，以及旧按钮的快照保护。
 
+`sidebar-edit-compact-menu` 与 `sidebar-edit-anchor-keyboard-and-safety` 检查侧栏编辑在三种 Markdown 模式下使用小菜单、首次点击、改色与想法保存／取消、键盘焦点、滚动关闭、窄视口定位及过期内容拒写。测试读值与事务计数使用当前笔记视图，不调用会激活另一个标签页的叶节点获取操作。
+
 这些检查使用桌面原生应用。390px 布局和合成触控事件不代表手机原生应用或实体墨水屏实测。测试中使用的 Obsidian 内部接口仅用于验收，不打包进插件。
