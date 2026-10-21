@@ -6,7 +6,7 @@ A light Obsidian theme for long reading sessions, with an optional plugin for hi
 
 **[Download the reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/latest)** · **[Annotation guide](annotations/README.en.md)** · **[Installation reference, in Chinese](INSTALL.md)**
 
-Current versions: **theme 1.3.7 / annotation plugin 1.1.7**. Requires Obsidian **1.10.6 or later**. The interface is currently in Chinese; this guide keeps the actual Chinese labels alongside English explanations. Install from GitHub Releases or this repository; the theme and plugin are not yet listed in Obsidian's community directory.
+Current versions: **theme 1.3.7 / annotation plugin 1.1.7**. Requires Obsidian **1.10.6 or later**. The interface is currently in Chinese; this guide keeps the actual Chinese labels alongside English explanations. The plugin is available through its [community page](#obsidian-community-directory); GitHub Releases and this repository remain installation alternatives.
 
 The theme uses a white background, dark gray text, a default line height of 1.75, and a reading width of 40em. Font and font size follow Obsidian's native Appearance settings. The theme is plain CSS and works without the plugin.
 
@@ -211,7 +211,9 @@ The build and installer have no third-party package dependencies and make no net
 
 ## Obsidian community directory
 
-The annotation plugin is distributed from the public [obsidian-inkstone-annotations repository](https://github.com/bufan1024/obsidian-inkstone-annotations), with English and Chinese documentation and a self-contained source build. A directory listing has not yet been confirmed; use the GitHub installation steps above until it is available. See the [submission and release guide](SUBMITTING.md) for the repository layout, release attachments, and official submission flow. The theme and plugin are separate directory submissions.
+As of **2026-10-21**, the plugin's automated review is **Completed**. Its [community directory page](https://community.obsidian.md/plugins/inkstone-annotations) shows **Review Satisfactory**, and **Add to Obsidian** is available. Open the page → choose **Add to Obsidian** → follow the prompts in Obsidian to install and enable the plugin. The GitHub manual installation steps above remain an alternative. **The theme has not been submitted.**
+
+Plugin releases use the public [obsidian-inkstone-annotations repository](https://github.com/bufan1024/obsidian-inkstone-annotations), with English and Chinese documentation and a self-contained source build. See the [submission and release guide](SUBMITTING.md) for the repository layout, attachments, and official submission flow.
 
 ## Design references and license
 

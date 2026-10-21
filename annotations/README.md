@@ -6,11 +6,13 @@
 
 标注直接保存在当前 Markdown 中，兼容旧版 Inkstone 标记。插件只使用本地 Obsidian API，不调用网络，不需要账户或其他插件；实时预览使用 Obsidian 自带的 CodeMirror，用户无需安装依赖。Inkstone 主题仍是纯 CSS，可独立使用。
 
-独立插件发布与社区目录提交使用 [obsidian-inkstone-annotations](https://github.com/bufan1024/obsidian-inkstone-annotations)，可从其 [Release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/latest) 获取三个运行文件。当前尚未确认上架 Obsidian 社区目录。
+独立插件使用 [obsidian-inkstone-annotations](https://github.com/bufan1024/obsidian-inkstone-annotations) 发布，可从其 [Release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/latest) 获取三个运行文件。
+
+**社区目录状态（2026-10-21）：** 插件自动审核已完成（**Completed**），[公开页面](https://community.obsidian.md/plugins/inkstone-annotations)显示 **Review Satisfactory**，**Add to Obsidian** 已可用。打开页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示安装并启用。GitHub Release 手动安装仍可作为备选。Inkstone 主题尚未提交。
 
 ## 安装与更新
 
-将插件的三个运行文件放到以下目录：
+手动安装时，将插件的三个运行文件放到以下目录：
 
 ```text
 你的笔记库/

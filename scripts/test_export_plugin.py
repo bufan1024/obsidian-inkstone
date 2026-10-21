@@ -105,12 +105,23 @@ class PluginExportTests(unittest.TestCase):
         self.assertFalse(self.output.exists())
 
     def test_readmes_have_local_language_demos_and_resolvable_links(self):
+        market_status = {
+            "annotations/README.en.md": ("## Install and update", "Community listing status: published, review pending."),
+            "annotations/README.md": ("## 安装与更新", "社区目录状态：条目已公开，审核待完成。"),
+        }
+        for name, (heading, status_text) in market_status.items():
+            source = self.source / name
+            source.write_text(source.read_text().replace(heading, f"{status_text}\n\n{heading}", 1), encoding="utf-8")
         status, _, error = self.run_export()
         self.assertEqual(status, 0, error)
         english = (self.output / "README.md").read_text()
         chinese = (self.output / "README.zh-CN.md").read_text()
         self.assertIn("[简体中文](README.zh-CN.md)", english)
         self.assertIn("[English](README.md)", chinese)
+        self.assertEqual(english.count(market_status["annotations/README.en.md"][1]), 1)
+        self.assertEqual(chinese.count(market_status["annotations/README.md"][1]), 1)
+        self.assertFalse("The plugin is not yet confirmed as listed" in english, "The exporter must not add its own English market status")
+        self.assertFalse("当前尚未确认上架" in chinese, "The exporter must not add its own Chinese market status")
         for name, text in (("README.md", english), ("README.zh-CN.md", chinese)):
             self.assertIn("](assets/annotate.gif)", text)
             self.assertIn("](assets/review-export.gif)", text)

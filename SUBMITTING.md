@@ -2,7 +2,13 @@
 
 [简体中文项目说明](README.md) · [English project guide](README.en.md)
 
-The annotation plugin and the Inkstone theme are separate entries in Obsidian's community directory. This document describes the plugin submission. A GitHub release is available before a directory listing is approved; do not describe a release or local test as directory approval.
+The annotation plugin and the Inkstone theme require separate community directory submissions. This document describes the plugin submission. A GitHub release or local test does not establish directory approval.
+
+## Current status (2026-10-21)
+
+The automated review for plugin **1.1.7** (commit `49e9dd8`) is **Completed**. Its [public directory page](https://community.obsidian.md/plugins/inkstone-annotations) shows **Review Satisfactory** and **Health Excellent**, with **Add to Obsidian** available. Open that page → choose **Add to Obsidian** → follow the prompts in Obsidian to install and enable the plugin. GitHub Releases remain a manual installation alternative. **The Inkstone theme has not been submitted.**
+
+Non-blocking recommendations and CSS warnings remain; they have not all been addressed.
 
 ## Repository and release
 
@@ -30,7 +36,7 @@ The plugin ID remains `inkstone-annotations`, including for existing manual inst
 3. Read the developer policies and the maintenance commitment shown by the form. The owner must confirm that they agree and will keep the plugin working, or remove or transfer it if they stop maintaining it.
 4. Submit, inspect the automated review, and address any reported errors. For code fixes, increment the plugin version and publish a new release with the direct runtime attachments. Approval or availability is determined by the community platform, not by this repository's CI.
 
-After publication, updates use new version releases in the same distribution repository; do not create a new directory entry for every update. Update both README languages with the verified listing URL and installation instructions once the listing exists.
+After publication, updates use new version releases in the same distribution repository; do not create a new directory entry for every update. Keep both README languages current with the public page, verified review status, and installation instructions.
 
 ## Official references
 

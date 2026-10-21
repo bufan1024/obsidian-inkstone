@@ -181,7 +181,9 @@ python3 scripts/package.py
 
 ## Obsidian 社区目录
 
-标注插件使用独立的公开仓库 [obsidian-inkstone-annotations](https://github.com/bufan1024/obsidian-inkstone-annotations) 发布，提供英文／中文说明和可独立构建的源码。当前尚未确认上架；在官方目录可安装前，请继续使用上面的 GitHub 安装方式。[上架与后续发布说明](SUBMITTING.md)记录仓库结构、版本附件和官方提交入口。主题和标注插件需要分别提交。
+截至 **2026-10-21**，标注插件自动审核已完成（**Completed**），[社区目录公开页面](https://community.obsidian.md/plugins/inkstone-annotations)显示 **Review Satisfactory**，**Add to Obsidian** 已可用。打开页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示安装并启用插件。上面的 GitHub 手动安装仍可作为备选。**主题尚未提交。**
+
+插件使用独立的公开仓库 [obsidian-inkstone-annotations](https://github.com/bufan1024/obsidian-inkstone-annotations) 发布，提供英文／中文说明和可独立构建的源码。[提交与后续发布说明](SUBMITTING.md)记录仓库结构、版本附件和官方提交流程。
 
 ## 设计参考与许可
 
