@@ -122,7 +122,7 @@ def readme(data: bytes, language: str, repository: str, exported: set[str]) -> b
     downloads = " · ".join(f"[{name}]({repository}/releases/latest/download/{name})" for name in ("main.js", "manifest.json", "styles.css"))
     if language == "en":
         language_bar = "[简体中文](README.zh-CN.md) · English"
-        introduction = f"Standalone plugin files: [latest release]({repository}/releases/latest) · {downloads}."
+        introduction = f"**[Install from the Obsidian marketplace (recommended)](https://community.obsidian.md/plugins/inkstone-annotations)** · **[Installation and updates](#install-and-update)**\n\nManual download (alternative): [latest release]({repository}/releases/latest) · {downloads}."
         demos = "## Demos\n\n![Select text, choose a style, and save a thought](assets/annotate.gif)\n\n![Review annotations and export excerpts](assets/review-export.gif)"
         text = text.replace(f"[GitHub Releases]({UPSTREAM}/releases/latest)", f"[GitHub Releases]({repository}/releases/latest)")
         text = text.replace("When using the source repository or reading kit, run this from its root directory:", f"The optional installer belongs to the [upstream theme repository]({UPSTREAM}) or its reading kit, and is not included here. Run the following only from the upstream checkout or extracted kit:")
@@ -144,7 +144,7 @@ Plugin source is maintained once, in the [upstream annotations directory]({UPSTR
 """
     else:
         language_bar = "简体中文 · [English](README.md)"
-        introduction = f"独立插件：[最新 Release]({repository}/releases/latest) · {downloads}。"
+        introduction = f"**[从 Obsidian 市场安装（推荐）](https://community.obsidian.md/plugins/inkstone-annotations)** · **[安装与更新](#安装与更新)**\n\n手动下载（备选）：[最新 Release]({repository}/releases/latest) · {downloads}。"
         demos = "## 操作演示\n\n![选中文字、选择样式并保存想法](assets/annotate.gif)\n\n![查看标注侧栏并导出摘录](assets/review-export.gif)"
         text = text.replace("使用完整仓库或合集中的安装脚本时", f"使用[上游主题仓库]({UPSTREAM})或合集中的安装脚本时（本独立插件仓库不含安装器）")
         text = re.split(r"(?m)^## 开发\s*$", text, maxsplit=1)[0].rstrip()

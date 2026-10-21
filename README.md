@@ -6,7 +6,7 @@
 
 Inkstone is a light-only Obsidian theme for focused long-form reading. It uses a white background, dark gray text, and fonts installed on your device. Font size follows Obsidian's native settings; an optional companion plugin adds highlights, underlines, thoughts, and excerpt export.
 
-**[下载主题＋标注合集](https://github.com/bufan1024/obsidian-inkstone/releases/latest)** · **[安装与更新](INSTALL.md)** · **[标注使用说明](annotations/README.md)**
+**[市场安装与更新（推荐）](#安装与更新)** · **[主题市场](https://community.obsidian.md/themes/inkstone)** · **[插件市场](https://community.obsidian.md/plugins/inkstone-annotations)** · **[标注使用说明](annotations/README.md)**
 
 当前版本：**主题 1.3.7／标注插件 1.1.7**。白底、深灰正文，默认 1.75 倍行高、40em 行宽；字体和字号跟随 Obsidian「设置 → 外观」。只想阅读时，可以单独安装纯 CSS 主题。
 
@@ -38,6 +38,29 @@ Inkstone is a light-only Obsidian theme for focused long-form reading. It uses a
 
 ## 安装与更新
 
+### 从 Obsidian 市场安装（推荐）
+
+先在 Obsidian 中打开要使用的笔记库。市场安装不需要 Git、Python 或构建工具；主题和标注插件是两个独立条目，需要分别安装。
+
+1. **安装主题：** 打开「设置 → 外观 → 主题 → 管理」，搜索 **Inkstone**，选择后点击「安装并使用」（Install and use）。回到「设置 → 外观」，确认主题为 Inkstone、基础颜色为**浅色**；主题仅支持浅色，只需要阅读样式时安装主题即可。
+2. **安装插件：** 打开「设置 → 第三方插件」，首次使用时按提示关闭「受限模式」。点击「浏览」（Browse），搜索 **Inkstone Annotations**（ID：`inkstone-annotations`），点击「安装」（Install），再点击「启用」（Enable）；也可在「已安装插件」中打开它的开关。安装主题不会自动安装或启用插件。
+3. **确认功能：** 在笔记中选中同一源代码行内的普通文字，应出现「划线」「写想法」等快捷操作；在命令面板中搜索「墨读：打开标注侧栏」即可查看标注。
+
+也可打开[主题市场页面](https://community.obsidian.md/themes/inkstone)或[插件市场页面](https://community.obsidian.md/plugins/inkstone-annotations)，点击 **Add to Obsidian**，允许打开 Obsidian 后按提示完成安装。请确认目标笔记库；主题安装后即可使用，插件还需启用。
+
+### 从市场更新主题和插件
+
+主题和插件需要**分别更新**，不会自动安装新版本。只更新 Inkstone 时，无需点击「全部更新」。
+
+- **主题：** 打开「设置 → 外观 → 主题 → 管理」，搜索并选择 **Inkstone**；如有「检查更新」先点击，有新版本时点击「更新」（Update）。完成后确认外观仍选择 Inkstone 和浅色。
+- **插件：** 打开「设置 → 第三方插件」，点击「检查更新」（Check for updates），再在「已安装插件」中点击 **Inkstone Annotations** 旁的「更新」。更新后确认插件开关仍已打开，并试一次划线或写想法。
+
+此前通过 GitHub 手动安装的用户，若使用原有主题目录 `themes/Inkstone/`、插件目录 `plugins/inkstone-annotations/` 和插件 ID，可直接检查市场更新，无需卸载重装；保留插件 `data.json`、已有标注和阅读偏好。官方操作说明：[主题](https://obsidian.md/help/themes)、[第三方插件](https://obsidian.md/help/community-plugins)。
+
+### GitHub、脚本与手动安装（备选）
+
+如果暂时无法使用市场，可使用以下方式。
+
 下载并解压 [Release 合集](https://github.com/bufan1024/obsidian-inkstone/releases/latest)，或克隆仓库。**先关闭 Obsidian**，在解压目录或仓库目录运行（需要 Python 3）：
 
 ```sh
@@ -55,7 +78,7 @@ Windows 可用 `py -3` 代替 `python3`。脚本只处理指定库，替换前�
 
 ## 用 Codex / AI 安装
 
-将以下提示词复制给**能执行命令、访问本机文件**的 Codex 或 AI 编程助手，先替换笔记库绝对路径。在线聊天用户请使用[手动安装](INSTALL.md#手动安装)。
+优先使用上面的[市场安装](#从-obsidian-市场安装推荐)。需要 AI 执行脚本安装时，将以下提示词复制给**能执行命令、访问本机文件**的 Codex 或 AI 编程助手，先替换笔记库绝对路径。在线聊天用户可直接使用市场安装，或按[手动安装教程](INSTALL.md#手动安装)操作。
 
 <details>
 <summary>展开完整安装提示词</summary>
@@ -183,9 +206,7 @@ python3 scripts/package.py
 
 ## Obsidian 社区目录
 
-截至 **2026-10-21**，标注插件自动审核已完成（**Completed**），[社区目录公开页面](https://community.obsidian.md/plugins/inkstone-annotations)显示 **Review Satisfactory**，**Add to Obsidian** 已可用。打开页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示安装并启用插件。上面的 GitHub 手动安装仍可作为备选。
-
-主题 **1.3.7** 的自动审核也于 **2026-10-21** 完成（**Completed**），[主题公开页面](https://community.obsidian.md/themes/inkstone)显示 **Review Satisfactory**，仅支持浅色（**Light only**）。打开主题页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示使用或选择 Inkstone 主题。GitHub 安装仍可作为备选。
+Inkstone [主题](https://community.obsidian.md/themes/inkstone)和[标注插件](https://community.obsidian.md/plugins/inkstone-annotations)已在 Obsidian 市场分别上架，推荐按[市场安装与更新](#安装与更新)操作。
 
 插件使用独立的公开仓库 [obsidian-inkstone-annotations](https://github.com/bufan1024/obsidian-inkstone-annotations) 发布，提供英文／中文说明和可独立构建的源码。[提交与后续发布说明](SUBMITTING.md)记录仓库结构、版本附件和官方提交流程。
 

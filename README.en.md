@@ -4,9 +4,9 @@
 
 A light Obsidian theme for long reading sessions, with an optional plugin for highlights, underlines, thoughts, and Markdown excerpts. Designed with Chinese text and e-ink reading in mind.
 
-**[Download the reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/latest)** · **[Annotation guide](annotations/README.en.md)** · **[Installation reference, in Chinese](INSTALL.md)**
+**[Marketplace installation and updates (recommended)](#install-or-update)** · **[Theme listing](https://community.obsidian.md/themes/inkstone)** · **[Plugin listing](https://community.obsidian.md/plugins/inkstone-annotations)** · **[Annotation guide](annotations/README.en.md)**
 
-Current versions: **theme 1.3.7 / annotation plugin 1.1.7**. Requires Obsidian **1.10.6 or later**. The interface is currently in Chinese; this guide keeps the actual Chinese labels alongside English explanations. The plugin is available through its [community page](#obsidian-community-directory); GitHub Releases and this repository remain installation alternatives.
+Current versions: **theme 1.3.7 / annotation plugin 1.1.7**. Requires Obsidian **1.10.6 or later**. The plugin interface is currently in Chinese; this guide keeps its actual labels alongside English explanations. Install the theme and plugin separately from Obsidian's community directory; GitHub Releases and the install script are alternatives.
 
 The theme uses a white background, dark gray text, a default line height of 1.75, and a reading width of 40em. Font and font size follow Obsidian's native Appearance settings. The theme is plain CSS and works without the plugin.
 
@@ -37,6 +37,27 @@ If the animation does not play, see the [thought composer](preview-selection-ide
 See the [sidebar screenshot](preview-workspace.png) or the [sidebar and export guide](annotations/README.en.md#sidebar-and-excerpt-export).
 
 ## Install or update
+
+### Recommended: install from Obsidian's community directory
+
+Open the vault you want to use in Obsidian first. Community installation requires no Git, Python, or build tools. The theme and annotation plugin are separate components:
+
+- **Theme:** Open **Settings → Appearance → Themes → Manage**, search for **Inkstone**, and choose **Install and use**. Inkstone supports **Light only**; set the color scheme to light.
+- **Plugin:** Open **Settings → Community plugins** and turn off **Restricted mode** if needed on first use. Choose **Browse**, search for **Inkstone Annotations** (plugin ID: `inkstone-annotations`), then select **Install → Enable**. You can also turn on its switch under **Installed plugins** after installation. The plugin can be used without the theme.
+- **Check the result:** In a note, select plain text within one source line. The floating toolbar should offer **「划线」 (Mark)** and **「写想法」 (Write a thought)**. Search the command palette for **「墨读：打开标注侧栏」** to open the annotation sidebar.
+
+You can also open the [theme page](https://community.obsidian.md/themes/inkstone) or [plugin page](https://community.obsidian.md/plugins/inkstone-annotations) and choose **Add to Obsidian**, then finish in the target vault. Installing the theme does not install or enable the plugin.
+
+### Update only the theme or plugin
+
+- **Plugin:** Open **Settings → Community plugins → Current plugins → Check for updates**. Under **Installed plugins**, choose **Update** beside **Inkstone Annotations** only, then confirm its switch is still enabled.
+- **Theme:** Open **Settings → Appearance → Themes → Manage** and select **Inkstone**. If **Check for updates** is shown, use it first, then choose **Update** when available. Confirm that Inkstone and the Light color scheme remain selected.
+
+New theme and plugin versions are not installed automatically. Update them separately; you do not need **Update all** to update only Inkstone. Try a highlight or thought afterward. If you previously installed from GitHub using `themes/Inkstone/` and `plugins/inkstone-annotations/` with the original plugin ID, check for marketplace updates without uninstalling first; keep plugin `data.json`, saved annotations, and your preferences. See the official [community plugin](https://obsidian.md/help/community-plugins) and [theme](https://obsidian.md/help/themes) guides for the app's installation and update controls.
+
+### Alternative: GitHub Release or install script
+
+Use this method if the marketplace is temporarily unavailable.
 
 Download and extract the [latest reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/latest), currently `Inkstone-Reading-Kit-1.3.7.zip`, or clone this repository. Open the target vault in Obsidian at least once so its configuration folder exists, then **quit Obsidian before installing or updating**.
 
@@ -75,11 +96,13 @@ py -3 scripts/install.py --vault "D:\Notes" --update
 
 The installer backs up files that differ under `<config-folder>/inkstone-backups/` and prints the actual location. It keeps notes, plugin `data.json`, other plugin settings, and the enabled-plugin list. It does not enable plugins or change Restricted mode.
 
-### Enable the plugin
+#### Enable the plugin after script installation
 
-Reopen Obsidian. Confirm Inkstone and light mode under **Settings → Appearance**, then open **Settings → Community plugins**, turn off Restricted mode, and manually enable **「Inkstone Annotations」**. A successful script run does not mean the plugin is enabled. Skip this step when using only the theme.
+After a first script installation, reopen Obsidian. Confirm Inkstone and light mode under **Settings → Appearance**, then open **Settings → Community plugins**, turn off Restricted mode if needed, and manually enable **Inkstone Annotations**. A successful script run does not mean the plugin is enabled. Skip this step when using only the theme.
 
 ### Manual installation
+
+This is another alternative to marketplace installation.
 
 Copy the kit's `themes/Inkstone/` and `plugins/inkstone-annotations/` folders into your vault's configuration folder:
 
@@ -103,7 +126,7 @@ For a first manual installation, select Inkstone and light mode under Appearance
 
 ## Install with Codex or another AI assistant
 
-Use an assistant that can access local files and run commands. Replace the vault path before sending this prompt. A chat-only assistant cannot install local files; use [manual installation](#manual-installation) instead.
+Prefer [marketplace installation](#install-or-update). For an AI-assisted script installation, use an assistant that can access local files and run commands. Replace the vault path before sending this prompt. With a chat-only assistant, follow the marketplace steps yourself or use [manual installation](#manual-installation).
 
 <details>
 <summary>Copy the installation prompt</summary>
@@ -211,11 +234,7 @@ The build and installer have no third-party package dependencies and make no net
 
 ## Obsidian community directory
 
-As of **2026-10-21**, the plugin's automated review is **Completed**. Its [community directory page](https://community.obsidian.md/plugins/inkstone-annotations) shows **Review Satisfactory**, and **Add to Obsidian** is available. Open the page → choose **Add to Obsidian** → follow the prompts in Obsidian to install and enable the plugin. The GitHub manual installation steps above remain an alternative.
-
-As of **2026-10-21**, the automated review for theme **1.3.7** is also **Completed**. Its [public theme page](https://community.obsidian.md/themes/inkstone) shows **Review Satisfactory**, with **Light only** support. Open the theme page → choose **Add to Obsidian** → follow the prompts in Obsidian to use or select Inkstone. GitHub installation remains an alternative.
-
-Plugin releases use the public [obsidian-inkstone-annotations repository](https://github.com/bufan1024/obsidian-inkstone-annotations), with English and Chinese documentation and a self-contained source build. See the [submission and release guide](SUBMITTING.md) for the repository layout, attachments, and official submission flow.
+The [Inkstone theme](https://community.obsidian.md/themes/inkstone) and [Inkstone Annotations plugin](https://community.obsidian.md/plugins/inkstone-annotations) have separate community pages. Plugin releases use the public [obsidian-inkstone-annotations repository](https://github.com/bufan1024/obsidian-inkstone-annotations). See the [submission and release guide](SUBMITTING.md) for repository layout and release details.
 
 ## Design references and license
 
