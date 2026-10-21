@@ -4,6 +4,8 @@
 
 适合中文长文阅读和墨水屏的 Obsidian 浅色主题：安静阅读，随手划线、写想法，再把标注整理成摘录。
 
+Inkstone is a light-only Obsidian theme for focused long-form reading. It uses a white background, dark gray text, and fonts installed on your device. Font size follows Obsidian's native settings; an optional companion plugin adds highlights, underlines, thoughts, and excerpt export.
+
 **[下载主题＋标注合集](https://github.com/bufan1024/obsidian-inkstone/releases/latest)** · **[安装与更新](INSTALL.md)** · **[标注使用说明](annotations/README.md)**
 
 当前版本：**主题 1.3.7／标注插件 1.1.7**。白底、深灰正文，默认 1.75 倍行高、40em 行宽；字体和字号跟随 Obsidian「设置 → 外观」。只想阅读时，可以单独安装纯 CSS 主题。
@@ -181,7 +183,9 @@ python3 scripts/package.py
 
 ## Obsidian 社区目录
 
-截至 **2026-10-21**，标注插件自动审核已完成（**Completed**），[社区目录公开页面](https://community.obsidian.md/plugins/inkstone-annotations)显示 **Review Satisfactory**，**Add to Obsidian** 已可用。打开页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示安装并启用插件。上面的 GitHub 手动安装仍可作为备选。**主题尚未提交。**
+截至 **2026-10-21**，标注插件自动审核已完成（**Completed**），[社区目录公开页面](https://community.obsidian.md/plugins/inkstone-annotations)显示 **Review Satisfactory**，**Add to Obsidian** 已可用。打开页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示安装并启用插件。上面的 GitHub 手动安装仍可作为备选。
+
+主题 **1.3.7** 的自动审核也于 **2026-10-21** 完成（**Completed**），[主题公开页面](https://community.obsidian.md/themes/inkstone)显示 **Review Satisfactory**，仅支持浅色（**Light only**）。打开主题页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示使用或选择 Inkstone 主题。GitHub 安装仍可作为备选。
 
 插件使用独立的公开仓库 [obsidian-inkstone-annotations](https://github.com/bufan1024/obsidian-inkstone-annotations) 发布，提供英文／中文说明和可独立构建的源码。[提交与后续发布说明](SUBMITTING.md)记录仓库结构、版本附件和官方提交流程。
 

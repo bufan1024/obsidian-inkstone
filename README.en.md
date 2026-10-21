@@ -211,7 +211,9 @@ The build and installer have no third-party package dependencies and make no net
 
 ## Obsidian community directory
 
-As of **2026-10-21**, the plugin's automated review is **Completed**. Its [community directory page](https://community.obsidian.md/plugins/inkstone-annotations) shows **Review Satisfactory**, and **Add to Obsidian** is available. Open the page → choose **Add to Obsidian** → follow the prompts in Obsidian to install and enable the plugin. The GitHub manual installation steps above remain an alternative. **The theme has not been submitted.**
+As of **2026-10-21**, the plugin's automated review is **Completed**. Its [community directory page](https://community.obsidian.md/plugins/inkstone-annotations) shows **Review Satisfactory**, and **Add to Obsidian** is available. Open the page → choose **Add to Obsidian** → follow the prompts in Obsidian to install and enable the plugin. The GitHub manual installation steps above remain an alternative.
+
+As of **2026-10-21**, the automated review for theme **1.3.7** is also **Completed**. Its [public theme page](https://community.obsidian.md/themes/inkstone) shows **Review Satisfactory**, with **Light only** support. Open the theme page → choose **Add to Obsidian** → follow the prompts in Obsidian to use or select Inkstone. GitHub installation remains an alternative.
 
 Plugin releases use the public [obsidian-inkstone-annotations repository](https://github.com/bufan1024/obsidian-inkstone-annotations), with English and Chinese documentation and a self-contained source build. See the [submission and release guide](SUBMITTING.md) for the repository layout, attachments, and official submission flow.
 

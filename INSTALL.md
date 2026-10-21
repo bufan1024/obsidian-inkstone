@@ -2,7 +2,9 @@
 
 Inkstone **主题 1.3.7** 是纯 CSS，**标注插件 1.1.7** 为可选组件。主题可单独安装；标注、侧栏、摘录导出、快捷条和按屏翻页需要启用插件。最低 Obsidian 版本为 **1.10.6**。
 
-**社区目录状态（2026-10-21）：** 插件自动审核已完成（**Completed**），[公开页面](https://community.obsidian.md/plugins/inkstone-annotations)显示 **Review Satisfactory**，**Add to Obsidian** 已可用。打开页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示安装并启用插件。下文的 GitHub 安装可作为备选。主题尚未提交，仍通过 GitHub 安装。
+**社区目录状态（2026-10-21）：** 插件自动审核已完成（**Completed**），[公开页面](https://community.obsidian.md/plugins/inkstone-annotations)显示 **Review Satisfactory**，**Add to Obsidian** 已可用。打开页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示安装并启用插件。下文的 GitHub 安装可作为备选。
+
+主题 **1.3.7** 的自动审核也于 **2026-10-21** 完成（**Completed**），[主题公开页面](https://community.obsidian.md/themes/inkstone)显示 **Review Satisfactory**，仅支持浅色（**Light only**）。打开主题页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示使用或选择 Inkstone 主题。下文的 GitHub 安装仍可作为备选。
 
 下文脚本及手动复制操作前，关闭目标笔记库或退出 Obsidian，避免应用退出时覆盖刚更新的文件。请先用 Obsidian 打开过该笔记库，使配置目录存在。以下路径都指**笔记库目录**。
 

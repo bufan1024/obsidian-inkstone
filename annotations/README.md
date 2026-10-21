@@ -8,7 +8,7 @@
 
 独立插件使用 [obsidian-inkstone-annotations](https://github.com/bufan1024/obsidian-inkstone-annotations) 发布，可从其 [Release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/latest) 获取三个运行文件。
 
-**社区目录状态（2026-10-21）：** 插件自动审核已完成（**Completed**），[公开页面](https://community.obsidian.md/plugins/inkstone-annotations)显示 **Review Satisfactory**，**Add to Obsidian** 已可用。打开页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示安装并启用。GitHub Release 手动安装仍可作为备选。Inkstone 主题尚未提交。
+**社区目录状态（2026-10-21）：** 插件自动审核已完成（**Completed**），[公开页面](https://community.obsidian.md/plugins/inkstone-annotations)显示 **Review Satisfactory**，**Add to Obsidian** 已可用。打开页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示安装并启用。GitHub Release 手动安装仍可作为备选。Inkstone 主题 **1.3.7** 同日自动审核已完成（**Completed**），[主题公开页面](https://community.obsidian.md/themes/inkstone)显示 **Review Satisfactory**，仅支持浅色（**Light only**）；打开主题页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示使用或选择 Inkstone 主题。
 
 ## 安装与更新
 
