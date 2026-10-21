@@ -1,10 +1,12 @@
 # Inkstone · 墨读
 
+简体中文 · [English](README.en.md)
+
 适合中文长文阅读和墨水屏的 Obsidian 浅色主题：安静阅读，随手划线、写想法，再把标注整理成摘录。
 
 **[下载主题＋标注合集](https://github.com/bufan1024/obsidian-inkstone/releases/latest)** · **[安装与更新](INSTALL.md)** · **[标注使用说明](annotations/README.md)**
 
-当前版本：**主题 1.3.6／标注插件 1.1.6**。白底、深灰正文，默认 1.75 倍行高、40em 行宽；字体和字号跟随 Obsidian「设置 → 外观」。只想阅读时，可以单独安装纯 CSS 主题。
+当前版本：**主题 1.3.7／标注插件 1.1.7**。白底、深灰正文，默认 1.75 倍行高、40em 行宽；字体和字号跟随 Obsidian「设置 → 外观」。只想阅读时，可以单独安装纯 CSS 主题。
 
 ## 看两段演示就能开始
 
@@ -45,7 +47,7 @@ python3 scripts/install.py --vault "/你的笔记库路径" --update
 python3 scripts/install.py --vault "/你的笔记库路径" --update --plugin-only
 ```
 
-首次完整安装会选用 Inkstone 浅色主题并开启可读行宽。重新打开 Obsidian，进入「设置 → 第三方插件」，关闭受限模式并**手动启用「墨读标注 Inkstone Annotations」**；安装脚本不会代为启用。只装主题可加 `--theme-only`，无需启用插件。
+首次完整安装会选用 Inkstone 浅色主题并开启可读行宽。重新打开 Obsidian，进入「设置 → 第三方插件」，关闭受限模式并**手动启用「Inkstone Annotations」**；安装脚本不会代为启用。只装主题可加 `--theme-only`，无需启用插件。
 
 Windows 可用 `py -3` 代替 `python3`。脚本只处理指定库，替换前备份旧文件，保留插件 `data.json` 和其他插件设置。已有用户请加 `--update`；重复首次完整安装会重新选择主题与阅读偏好。不用命令行可按[手动安装、更新与恢复教程](INSTALL.md)操作。
 
@@ -77,7 +79,7 @@ Windows 可用 `py -3` 代替 `python3`。脚本只处理指定库，替换前�
    脚本会备份被替换的文件，不要绕过它直接覆盖已有配置。
 6. 检查主题和插件运行文件，告诉我安装或更新结果及实际备份位置，并提醒我重启 Obsidian。
    首次安装还需我在「设置 → 第三方插件」关闭受限模式并手动启用
-   「墨读标注 Inkstone Annotations」；不要将脚本完成说成插件已经启用。
+   「Inkstone Annotations」；不要将脚本完成说成插件已经启用。
 
 如果缺少 Git 或 Python 3，请说明缺少什么，并改用 Release 合集的手动安装方式。
 不要安装到没有指定的笔记库，也不要只给我操作步骤。
@@ -176,6 +178,10 @@ python3 scripts/package.py
 构建与安装脚本无第三方包依赖，也不联网。`dist/` 输出独立主题、独立插件和合集三种 ZIP；`.qa/` 与 `dist/` 不纳入源码仓库。
 
 </details>
+
+## Obsidian 社区目录
+
+标注插件使用独立的公开仓库 [obsidian-inkstone-annotations](https://github.com/bufan1024/obsidian-inkstone-annotations) 发布，提供英文／中文说明和可独立构建的源码。当前尚未确认上架；在官方目录可安装前，请继续使用上面的 GitHub 安装方式。[上架与后续发布说明](SUBMITTING.md)记录仓库结构、版本附件和官方提交入口。主题和标注插件需要分别提交。
 
 ## 设计参考与许可
 

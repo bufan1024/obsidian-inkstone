@@ -188,7 +188,7 @@ def install(vault, config_dir=".obsidian", theme_only=False, dry_run=False, *, u
     if update or plugin_only:
         print("已保留当前主题、配色和行宽偏好；未修改 appearance.json 或 app.json。")
     if not theme_only:
-        print("首次安装还需在「设置 → 第三方插件」手动关闭受限模式，并启用「墨读标注 Inkstone Annotations」。")
+        print("首次安装还需在「设置 → 第三方插件」手动关闭受限模式，并启用「Inkstone Annotations」。")
         print("脚本不会修改已启用的插件列表或受限模式，也不会改动笔记、插件 data.json 或其他文件。")
     return len(plan.changes)
 

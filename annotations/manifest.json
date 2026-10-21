@@ -1,9 +1,9 @@
 {
   "id": "inkstone-annotations",
-  "name": "墨读标注 Inkstone Annotations",
-  "version": "1.1.6",
+  "name": "Inkstone Annotations",
+  "version": "1.1.7",
   "minAppVersion": "1.10.6",
-  "description": "为选中文字添加下划线、四色高亮和脚注备注，支持彩色与墨水屏显示。",
+  "description": "Highlight and underline text, add footnote thoughts, and export excerpts with a reading sidebar and e-ink display.",
   "author": "Inkstone contributors",
   "isDesktopOnly": false
 }

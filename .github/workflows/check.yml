@@ -22,7 +22,7 @@ jobs:
           git diff --exit-code -- annotations/main.js annotations/styles.css annotations/examples/ theme.css
       - name: Test annotations
         run: node --test annotations/tests/*.test.cjs
-      - name: Test installer
+      - name: Test installer and distribution exporter
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
       - name: Verify release packages
         run: python3 scripts/package.py

@@ -1,8 +1,12 @@
 # 墨读标注 · Inkstone Annotations
 
-为 Obsidian 笔记提供下划线、四色高亮、脚注备注、当前笔记标注侧栏与摘录导出。插件版本为 **1.1.6**，配套 Inkstone 主题版本为 **1.3.6**，最低 Obsidian 版本为 **1.10.6**。
+简体中文 · [English](README.en.md)
+
+为 Obsidian 笔记提供下划线、四色高亮、脚注备注、当前笔记标注侧栏与摘录导出。插件版本为 **1.1.7**，配套 Inkstone 主题版本为 **1.3.7**，最低 Obsidian 版本为 **1.10.6**。
 
 标注直接保存在当前 Markdown 中，兼容旧版 Inkstone 标记。插件只使用本地 Obsidian API，不调用网络，不需要账户或其他插件；实时预览使用 Obsidian 自带的 CodeMirror，用户无需安装依赖。Inkstone 主题仍是纯 CSS，可独立使用。
+
+独立插件发布与社区目录提交使用 [obsidian-inkstone-annotations](https://github.com/bufan1024/obsidian-inkstone-annotations)，可从其 [Release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/latest) 获取三个运行文件。当前尚未确认上架 Obsidian 社区目录。
 
 ## 安装与更新
 
@@ -18,7 +22,7 @@
             └── manifest.json
 ```
 
-在「设置 → 第三方插件」关闭「受限模式」，手动启用「墨读标注 Inkstone Annotations」。未出现在列表中时，重启 Obsidian，并检查目录是否多嵌套了一层。`.obsidian` 是隐藏目录；使用自定义配置文件夹时替换为实际名称。独立主题包不包含 JavaScript，也不会添加操作入口。
+在「设置 → 第三方插件」关闭「受限模式」，手动启用「Inkstone Annotations」。未出现在列表中时，重启 Obsidian，并检查目录是否多嵌套了一层。`.obsidian` 是隐藏目录；使用自定义配置文件夹时替换为实际名称。独立主题包不包含 JavaScript，也不会添加操作入口。
 
 更新前关闭 Obsidian 并备份旧文件，只替换上述三个文件，保留 `data.json`。使用完整仓库或合集中的安装脚本时，可运行 `python3 scripts/install.py --vault "/你的笔记库路径" --update --plugin-only`，先加 `--dry-run` 可查看计划。它保留当前主题、配色、行宽偏好和插件数据，不会自动启用插件。完整步骤见[安装与更新教程](https://github.com/bufan1024/obsidian-inkstone/blob/main/INSTALL.md)。
 

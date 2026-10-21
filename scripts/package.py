@@ -18,6 +18,7 @@ THEME_FILES = (
     "theme.css",
     "manifest.json",
     "README.md",
+    "README.en.md",
     "INSTALL.md",
     "LICENSE",
     "VALIDATION.md",
@@ -42,6 +43,7 @@ PLUGIN_FILES = (
     "styles.css",
     "manifest.json",
     "README.md",
+    "README.en.md",
     "LICENSE",
     "examples/划线与备注示例.md",
 )
@@ -49,6 +51,10 @@ INSTALLER_FILE = "scripts/install.py"
 SOURCE_URL = "https://github.com/bufan1024/obsidian-inkstone/blob/main/"
 AI_INSTALL_URL = SOURCE_URL + "README.md#用-codex--ai-安装"
 RELEASE_DOC_LINKS = {
+    "annotations/README.en.md": SOURCE_URL + "annotations/README.en.md",
+    "annotations/README.en.md#sidebar-and-excerpt-export": SOURCE_URL + "annotations/README.en.md#sidebar-and-excerpt-export",
+    "annotations/README.en.md#commands-and-undo": SOURCE_URL + "annotations/README.en.md#commands-and-undo",
+    "SUBMITTING.md": SOURCE_URL + "SUBMITTING.md",
     "annotations/README.md": SOURCE_URL + "annotations/README.md",
     "annotations/README.md#当前笔记侧栏与摘录导出": SOURCE_URL + "annotations/README.md#当前笔记侧栏与摘录导出",
     "annotations/README.md#完整命令与撤销": SOURCE_URL + "annotations/README.md#完整命令与撤销",
@@ -101,6 +107,8 @@ def release_markdown(data: bytes, replacements: dict[str, str]) -> bytes:
 def kit_readme(theme_version: str, plugin_version: str) -> bytes:
     return f"""# 墨读 Inkstone 阅读与标注合集
 
+简体中文 · [English guide](themes/Inkstone/README.en.md)
+
 主题版本 {theme_version}，标注插件版本 {plugin_version}。本包已包含运行所需文件，无需 Node.js 或构建步骤。
 
 ## 首次安装
@@ -113,7 +121,7 @@ def kit_readme(theme_version: str, plugin_version: str) -> bytes:
    ```
 
    Windows 可使用 `py -3` 替换 `python3`。可以先加 `--dry-run` 查看计划。
-3. 重新打开 Obsidian。在「设置 → 第三方插件」关闭受限模式，并手动启用「墨读标注 Inkstone Annotations」。安装程序不会自动启用第三方插件。
+3. 重新打开 Obsidian。在「设置 → 第三方插件」关闭受限模式，并手动启用「Inkstone Annotations」。安装程序不会自动启用第三方插件。
 4. 选中普通文字，使用快捷标注条、右键「墨读：标注与备注…」或同名命令添加标注。
 
 首次完整安装会选用 Inkstone 浅色主题并开启可读行宽。只安装主题可添加 `--theme-only`；只安装插件可添加 `--plugin-only`，不会切换主题、配色或行宽。使用自定义配置文件夹时添加 `--config-dir "配置文件夹名"`。
@@ -205,7 +213,7 @@ def main() -> int:
         installer = read_project_file(INSTALLER_FILE)
         theme_version = manifest_version(theme["manifest.json"], "theme")
         plugin_version = manifest_version(plugin["manifest.json"], "plugin")
-        for name in ("README.md", "INSTALL.md", "VALIDATION.md"):
+        for name in ("README.md", "README.en.md", "INSTALL.md", "VALIDATION.md"):
             theme[name] = release_markdown(theme[name], RELEASE_DOC_LINKS)
 
         theme_package = {f"Inkstone/{name}": data for name, data in theme.items()}

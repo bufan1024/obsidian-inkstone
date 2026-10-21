@@ -1,6 +1,6 @@
 # 安装与更新 Inkstone 墨读
 
-Inkstone **主题 1.3.6** 是纯 CSS，**标注插件 1.1.6** 为可选组件。主题可单独安装；标注、侧栏、摘录导出、快捷条和按屏翻页需要启用插件。最低 Obsidian 版本为 **1.10.6**。当前通过 GitHub Release 或本仓库安装，尚未上架 Obsidian 社区目录。
+Inkstone **主题 1.3.7** 是纯 CSS，**标注插件 1.1.7** 为可选组件。主题可单独安装；标注、侧栏、摘录导出、快捷条和按屏翻页需要启用插件。最低 Obsidian 版本为 **1.10.6**。当前通过 GitHub Release 或本仓库安装，尚未上架 Obsidian 社区目录。
 
 操作前关闭目标笔记库或退出 Obsidian，避免应用退出时覆盖刚更新的文件。请先用 Obsidian 打开过该笔记库，使配置目录存在。以下路径都指**笔记库目录**。
 
@@ -14,7 +14,7 @@ Inkstone **主题 1.3.6** 是纯 CSS，**标注插件 1.1.6** 为可选组件。
 
 ### 1. 获取文件
 
-下载 [最新 Release](https://github.com/bufan1024/obsidian-inkstone/releases/latest) 中的主题与标注合集，本版本文件名为 `Inkstone-Reading-Kit-1.3.6.zip`。解压后进入其中含有 `scripts/` 的目录。
+下载 [最新 Release](https://github.com/bufan1024/obsidian-inkstone/releases/latest) 中的主题与标注合集，本版本文件名为 `Inkstone-Reading-Kit-1.3.7.zip`。解压后进入其中含有 `scripts/` 的目录。
 
 也可以克隆源码：
 
@@ -68,7 +68,7 @@ python3 scripts/install.py --vault "/你的笔记库路径" --plugin-only
 重新打开 Obsidian：
 
 1. 首次完整安装后，在「设置 → 外观」确认主题为 `Inkstone`、基础配色为浅色。
-2. 如安装了标注插件，进入「设置 → 第三方插件」，关闭「受限模式」，手动启用「墨读标注 Inkstone Annotations」。只使用主题时不需要此步骤。
+2. 如安装了标注插件，进入「设置 → 第三方插件」，关闭「受限模式」，手动启用「Inkstone Annotations」。只使用主题时不需要此步骤。
 3. 选中普通文字，使用快捷标注条或右键「墨读：标注与备注…」，也可在命令面板中搜索同名命令。
 
 脚本完成不代表插件已经运行；安装程序不会代替你启用插件。

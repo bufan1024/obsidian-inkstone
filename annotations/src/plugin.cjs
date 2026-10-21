@@ -90,14 +90,14 @@ class AnnotationSettings extends PluginSettingTab {
   display() {
     const plugin = this.plugin;
     this.containerEl.empty();
-    this.containerEl.createEl('h2', { text: '墨读阅读与标注' });
+    new Setting(this.containerEl).setName('墨读阅读与标注').setHeading();
     new Setting(this.containerEl).setName('墨水屏显示').setDesc('使用灰底及实线、双线、点线、虚线。')
       .addToggle(toggle => toggle.setValue(plugin.settings.monochrome).onChange(value => plugin.setMonochrome(value)));
     new Setting(this.containerEl).setName('快捷标注条').setDesc('选中文字后显示颜色、划线和备注操作，支持触控。')
       .addToggle(toggle => toggle.setValue(plugin.settings.toolbar).onChange(async value => {
         plugin.settings.toolbar = value; plugin.hideToolbars(); await plugin.saveData(plugin.settings);
       }));
-    this.containerEl.createEl('h3', { text: '阅读排版' });
+    new Setting(this.containerEl).setName('阅读排版').setHeading();
     this.containerEl.createEl('p', { cls: 'inkstone-dialog-description', text: '字号与字体使用「设置 → 外观」中的原生控制。下列预设用于 Inkstone 主题。' });
     new Setting(this.containerEl).setName('阅读行高').addDropdown(dropdown => dropdown
       .addOptions({ '': '跟随主题 / CSS', '1.5': '紧凑 · 1.5', '1.75': '舒适 · 1.75', '2': '宽松 · 2.0' })
@@ -183,7 +183,6 @@ module.exports = class InkstoneAnnotations extends Plugin {
       doc.body.classList.remove('inkstone-annotations-monochrome');
       this.restoreReadingProperties(doc);
     }
-    this.app.workspace.detachLeavesOfType(annotationViews.VIEW_TYPE);
     this.recordCache.clear();
     this.lastAction = null; this.lastMarkdownView = null;
   }
