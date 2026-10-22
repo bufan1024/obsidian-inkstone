@@ -6,13 +6,13 @@ A light Obsidian theme for long reading sessions, with an optional plugin for hi
 
 **[Marketplace installation and updates (recommended)](#install-or-update)** · **[Theme listing](https://community.obsidian.md/themes/inkstone)** · **[Plugin listing](https://community.obsidian.md/plugins/inkstone-annotations)** · **[Annotation guide](annotations/README.en.md)**
 
-Current versions: **theme 1.3.7 / annotation plugin 1.1.7**. Requires Obsidian **1.10.6 or later**. The plugin interface is currently in Chinese; this guide keeps its actual labels alongside English explanations. Install the theme and plugin separately from Obsidian's community directory; GitHub Releases and the install script are alternatives.
+Local source versions: **theme 1.3.8 / annotation plugin 1.1.8 (unreleased)**. Published versions remain **1.3.7 / 1.1.7**; the new interactions described below apply to local source. Requires Obsidian **1.10.6 or later**. The plugin interface is currently in Chinese; this guide keeps its actual labels alongside English explanations. Install the theme and plugin separately from Obsidian's community directory; GitHub Releases and the install script are alternatives.
 
 The theme uses a white background, dark gray text, a default line height of 1.75, and a reading width of 40em. Font and font size follow Obsidian's native Appearance settings. The theme is plain CSS and works without the plugin.
 
 ## Two short demos
 
-Recorded in a separate sample vault on macOS with Obsidian 1.14.4. Click a GIF to view it at full size.
+Earlier interaction recordings from a separate sample vault on macOS with Obsidian 1.14.4; labels may differ. Click a GIF to view it at full size.
 
 ### Select text and write a thought
 
@@ -31,8 +31,8 @@ If the animation does not play, see the [thought composer](preview-selection-ide
 1. Choose **「更多 → 打开标注侧栏」 (More → Open annotation sidebar)**, or run **「墨读：打开标注侧栏」** from the command palette.
 2. Click **「编辑」 (Edit)** below an excerpt. The same small menu opens beside that button. A color or underline selected on its first screen takes effect immediately.
 3. Choose **「写想法」 / 「编辑想法」** to write or edit a note in the popover. Save applies the selected style and thought together; Cancel writes nothing.
-4. Filter by color or underline, then return to **「全部标注」 (All annotations)**. The list scrolls independently, keeping the filter and export controls visible.
-5. Click **「导出摘录」 (Export excerpts)**. A new Markdown file opens beside the original note, containing all annotations, thoughts, and a source link. Export ignores the sidebar filter and adds a number if the filename already exists.
+4. Filter by color or underline, then return to **「全部标注」 (All annotations)**. The list scrolls independently, keeping the filter and export controls visible. Updates to the same note preserve those controls and their keyboard focus.
+5. Click **「导出全部」 (Export all)**. The header shows filtered and total counts; the export description also states the total. A new Markdown file opens beside the original note, containing all annotations, thoughts, and a source link. Export ignores the sidebar filter and adds a number if the filename already exists.
 
 See the [sidebar screenshot](preview-workspace.png) or the [sidebar and export guide](annotations/README.en.md#sidebar-and-excerpt-export).
 
@@ -59,7 +59,7 @@ New theme and plugin versions are not installed automatically. Update them separ
 
 Use this method if the marketplace is temporarily unavailable.
 
-Download and extract the [latest reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/latest), currently `Inkstone-Reading-Kit-1.3.7.zip`, or clone this repository. Open the target vault in Obsidian at least once so its configuration folder exists, then **quit Obsidian before installing or updating**.
+Download and extract the [published reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/latest), `Inkstone-Reading-Kit-1.3.7.zip`, or clone this repository. Local source 1.3.8 / 1.1.8 has not been published. Open the target vault in Obsidian at least once so its configuration folder exists, then **quit Obsidian before installing or updating**.
 
 Run these commands from the extracted kit or repository directory. Python 3 is required; Node.js is not required to install the built files.
 
@@ -180,6 +180,10 @@ After a chapter, write down one small thing to try today.
 
 Select a phrase in the first paragraph, choose **「写想法」**, select yellow, type a note, and save. Underline a phrase in the second paragraph using **「划线样式 → 下划线」 (Annotation style → Underline)**. Click the first annotation to try its menu, then open the sidebar and use **「定位原文」 (Locate source)** or **「编辑」 (Edit)**. Export the excerpts to a new file.
 
+After you edit thought text or its draft style, incidental outside clicks, scrolling, and reactivating the same source keep the draft open. **「取消」 (Cancel)** and `Esc` explicitly discard it without writing. Unchanged menus still dismiss on outside click or scroll. Switching notes or changing the source prevents stale saves.
+
+The **「墨读：写想法」 (Write a thought)** command uses the same small composer. **「墨读：标注与想法」 (Annotation and thought)**, the ribbon icon, and the full context-menu entry open the larger panel. Existing command IDs and shortcut bindings are retained.
+
 The sidebar follows the newly opened export. Seeing no annotations there is expected: the export is ordinary Markdown. Switch back to the source note to keep managing annotations. Exports are snapshots and do not synchronize with later edits.
 
 ## Reading settings
@@ -187,6 +191,8 @@ The sidebar follows the newly opened export. Seeing no annotations there is expe
 Use Obsidian **Settings → Appearance** for font and font size. Inkstone uses fonts already installed on your device and downloads no resources. The plugin offers line heights of **1.5 / 1.75 / 2.0** and widths of **32em / 40em / 48em**. Enable **Settings → Editor → Readable line length**. Resetting the presets follows the theme or CSS while keeping native font settings.
 
 Enable **「墨水屏显示」 (E-ink display)** to show all four colors as light gray, distinguished by solid, double, dotted, and dashed underlines. This changes the display without changing colors saved in the note. With the plugin disabled, Inkstone still renders saved annotation markup and native footnotes.
+
+Reading view, Live Preview, and source mode adjust margins to the Markdown pane width, leaving room for text in narrow splits. Resolved internal links use dotted decoration to distinguish them from solid annotation underlines. Images keep explicitly specified heights; automatic proportional sizing applies only when no height is specified. Native notices retain readable text and actions, and loading indicators remain visible without animation.
 
 For CSS customization, create `.obsidian/snippets/inkstone-reading.css` and enable it under Appearance → CSS snippets:
 
@@ -238,6 +244,6 @@ The [Inkstone theme](https://community.obsidian.md/themes/inkstone) and [Inkston
 
 ## Design references and license
 
-Typography and spacing draw on OpenDesign's [Paper](https://github.com/nexu-io/open-design/blob/main/design-systems/paper/DESIGN.md), [Editorial](https://github.com/nexu-io/open-design/blob/main/design-systems/editorial/DESIGN.md), and [Minimal](https://github.com/nexu-io/open-design/blob/main/design-systems/minimal/DESIGN.md) systems, with structure informed by the [official Obsidian theme documentation](https://docs.obsidian.md/Themes/App+themes/Build+a+theme). The compact text-action toolbar takes cues from the [WeRead reading interface](https://weread.qq.com/web/reader/33332bf05cbba0333b1efb4) and is adapted to Obsidian.
+Typography and spacing draw on OpenDesign's [Paper](https://github.com/nexu-io/open-design/blob/main/design-systems/paper/DESIGN.md), [Editorial](https://github.com/nexu-io/open-design/blob/main/design-systems/editorial/DESIGN.md), and [Minimal](https://github.com/nexu-io/open-design/blob/main/design-systems/minimal/DESIGN.md) systems. Whitespace establishes hierarchy, shared spacing organizes menus and the sidebar, and annotation text scales with interface font size. Existing fonts and colors are retained. Structure is informed by the [official Obsidian theme documentation](https://docs.obsidian.md/Themes/App+themes/Build+a+theme). The compact text-action toolbar takes cues from the [WeRead reading interface](https://weread.qq.com/web/reader/33332bf05cbba0333b1efb4) and is adapted to Obsidian.
 
 [MIT License](LICENSE). For bug reports, include your Obsidian version, operating system, view mode, a minimal note example, and any CSS snippets in use.

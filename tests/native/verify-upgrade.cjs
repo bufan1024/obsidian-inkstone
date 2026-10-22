@@ -5,12 +5,16 @@ const selectedCase = process.argv[2] || 'all';
 const results = [];
 (async () => {
   const browser = await chromium.connectOverCDP(process.env.INKSTONE_CDP || 'http://127.0.0.1:19227');
+  let page, nativeMenus, savedNativeMenus = false;
   try {
-    const page = browser.contexts()[0].pages().find(page => page.url().startsWith('app://obsidian.md'));
+    page = browser.contexts()[0].pages().find(page => page.url().startsWith('app://obsidian.md'));
     assert(page, 'Native Obsidian page missing');
     page.setDefaultTimeout(6000);
     await page.waitForFunction(() => window.app?.workspace?.layoutReady);
     assert.equal(await page.evaluate(() => app.vault.getName()), 'Inkstone Upgrade Preview', 'Refuse to edit a non-QA vault');
+    // Test the public menu actions through their DOM implementation on macOS too.
+    nativeMenus = await page.evaluate(() => { const value=app.vault.getConfig('nativeMenus');app.vault.setConfig('nativeMenus',false);return value; });
+    savedNativeMenus = true;
     await page.setViewportSize({width:1440,height:1000});
     await page.evaluate(async () => {
       if (!app.plugins.enabled) await app.plugins.setEnable(true);
@@ -63,11 +67,11 @@ const results = [];
     // use the plugin's non-activating current-view lookup while testing popovers.
     const data=()=>page.evaluate(()=>app.plugins.plugins['inkstone-annotations'].currentView().getViewData());
     const rememberScope=()=>page.evaluate(()=>{
-      const current=app.keymap.windowScopes.get(window);
+      const current=app.keymap.windowScopes?.get(window)||app.keymap;
       window.__inkstoneQaSavedScope={scope:current.scope,prevScopes:[...current.prevScopes]};
     });
     const assertScope=async active=>assert.equal(await page.evaluate(active=>{
-      const current=app.keymap.windowScopes.get(window),saved=window.__inkstoneQaSavedScope;
+      const current=app.keymap.windowScopes?.get(window)||app.keymap,saved=window.__inkstoneQaSavedScope;
       if(active)return current.scope!==saved.scope&&current.prevScopes.length===saved.prevScopes.length+1;
       return current.scope===saved.scope&&current.prevScopes.length===saved.prevScopes.length&&current.prevScopes.every((scope,index)=>scope===saved.prevScopes[index]);
     },active),true,active?'The thought composer should own a temporary keyboard scope':'Closing the thought composer should restore the exact previous keyboard scope');
@@ -216,7 +220,7 @@ const results = [];
     });
     await run('sidebar-empty-states',async()=>{
       await fixture('这篇笔记暂时没有标注。\n');await command('show-annotations');
-      const sidebar=page.locator('.inkstone-annotation-sidebar'),filter=sidebar.getByLabel('筛选标注颜色'),exportButton=sidebar.getByRole('button',{name:'导出摘录',exact:true});await filter.selectOption('all');
+      const sidebar=page.locator('.inkstone-annotation-sidebar'),filter=sidebar.getByLabel('筛选标注颜色'),exportButton=sidebar.getByRole('button',{name:'导出全部',exact:true});await filter.selectOption('all');
       assert((await sidebar.locator('.inkstone-annotation-sidebar-empty').textContent()).includes('暂无标注'));assert.equal(await filter.isEnabled(),true);assert.equal(await exportButton.isDisabled(),true);
       await fixture('<mark class="inkstone-highlight inkstone-green">唯一绿色观点</mark>\n');await filter.selectOption('blue');
       assert.equal(await sidebar.locator('.inkstone-annotation-card').count(),0);assert((await sidebar.locator('.inkstone-annotation-sidebar-empty').textContent()).includes('筛选'));assert.equal(await filter.isEnabled(),true);assert.equal(await exportButton.isEnabled(),true);
@@ -227,9 +231,11 @@ const results = [];
     await run('sidebar-refresh-scroll-and-stale-actions',async()=>{
       await longSidebarFixture();await command('show-annotations');
       const sidebar=page.locator('.inkstone-annotation-sidebar'),filter=sidebar.getByLabel('筛选标注颜色');await filter.selectOption('all');await sidebarWidth(360);
-      const before=await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>{node.scrollTop=Math.min(700,(node.scrollHeight-node.clientHeight)/2);window.__inkstoneQaSidebarList=node;return node.scrollTop;});assert(before>200);
-      await page.evaluate(()=>{const view=app.workspace.getLeaf(false).view;view.editor.setValue(view.editor.getValue()+'\n新增的阅读附记。\n');});
-      await page.waitForFunction(()=>document.querySelector('.inkstone-annotation-sidebar-list')!==window.__inkstoneQaSidebarList);
+      const before=await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>{node.scrollTop=Math.min(700,(node.scrollHeight-node.clientHeight)/2);window.__inkstoneQaSidebarList=node;window.__inkstoneQaSidebarFirstCard=node.querySelector('.inkstone-annotation-card');return node.scrollTop;});assert(before>200);
+      await filter.focus();
+      await page.evaluate(()=>{window.__inkstoneQaSidebarFilter=document.activeElement;const view=app.plugins.plugins['inkstone-annotations'].currentView();view.editor.setValue(view.editor.getValue()+'\n新增的阅读附记。\n');});
+      await page.waitForFunction(()=>document.querySelector('.inkstone-annotation-card')!==window.__inkstoneQaSidebarFirstCard);
+      assert.equal(await page.evaluate(()=>document.querySelector('.inkstone-annotation-sidebar-list')===window.__inkstoneQaSidebarList&&document.activeElement===window.__inkstoneQaSidebarFilter),true,'Refreshing should retain the list container and focused filter');
       assert(Math.abs(await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>node.scrollTop)-before)<=1,'Refreshing the same note should preserve the list scroll offset');
       const visibleIndex=await sidebar.evaluate(node=>{const list=node.querySelector('.inkstone-annotation-sidebar-list'),bounds=list.getBoundingClientRect();return[...list.querySelectorAll('.inkstone-annotation-card')].findIndex(card=>{const r=card.getBoundingClientRect();return r.top>=bounds.top&&r.bottom<=bounds.bottom;});});assert(visibleIndex>=0);
       await sidebar.locator('.inkstone-annotation-card').nth(visibleIndex).getByRole('button',{name:'删除',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.inkstone-annotation-card').length===11);
@@ -238,7 +244,7 @@ const results = [];
       const current=await data(),updated=current+'\n更新后的内容必须保留。\n';
       await page.evaluate(updated=>{const stale=document.querySelector('.inkstone-annotation-card-actions button:last-child'),view=app.workspace.getLeaf(false).view;view.setViewData(updated,false);if(view.getViewData()!==updated)throw Error('QA snapshot update failed');stale.click();},updated);
       assert.equal(await data(),updated,'A detached sidebar action must not write through an old snapshot');
-      await fixture('<u class="inkstone-underline">切换到另一篇笔记</u>\n');assert.equal(await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>node.scrollTop),0);await page.evaluate(()=>{delete window.__inkstoneQaSidebarList;});
+      await fixture('<u class="inkstone-underline">切换到另一篇笔记</u>\n');assert.equal(await sidebar.locator('.inkstone-annotation-sidebar-list').evaluate(node=>node.scrollTop),0);await page.evaluate(()=>{delete window.__inkstoneQaSidebarList;delete window.__inkstoneQaSidebarFirstCard;delete window.__inkstoneQaSidebarFilter;});
     });
     await run('export',async()=>{
       await fixture('<u class="inkstone-underline">需要摘录</u>[^inkstone-2]\n\n[^inkstone-2]: 摘录备注\n');
@@ -246,6 +252,19 @@ const results = [];
       await page.waitForFunction(()=>app.workspace.getActiveFile()?.basename.includes('墨读摘录'),{},{timeout:2500});
       const text=await data();
       assert(text.includes('需要摘录')&&text.includes('摘录备注')&&text.includes('功能验证'));
+    });
+    await run('sidebar-filtered-export-all',async()=>{
+      const original='<mark class="inkstone-highlight inkstone-yellow">筛选中可见的观点</mark>[^inkstone-yellow]\n\n<mark class="inkstone-highlight inkstone-blue">筛选隐藏的观点</mark>[^inkstone-blue]\n\n[^inkstone-yellow]: 黄色想法\n[^inkstone-blue]: 蓝色想法\n';
+      await fixture(original);const sourcePath=await page.evaluate(()=>app.plugins.plugins['inkstone-annotations'].currentView().file.path);
+      await command('show-annotations');const sidebar=page.locator('.inkstone-annotation-sidebar');
+      await sidebar.getByLabel('筛选标注颜色').selectOption('yellow');
+      assert.equal(await sidebar.locator('.inkstone-annotation-card').count(),1);
+      await sidebar.getByRole('button',{name:'导出全部',exact:true}).click();
+      await page.waitForFunction(sourcePath=>app.workspace.getActiveFile()?.path!==sourcePath,sourcePath);
+      const exported=await data();
+      for(const text of ['筛选中可见的观点','筛选隐藏的观点','黄色想法','蓝色想法'])assert(exported.includes(text));
+      assert.equal(await page.evaluate(async sourcePath=>app.vault.read(app.vault.getAbstractFileByPath(sourcePath)),sourcePath),original);
+      await sidebar.getByLabel('筛选标注颜色').selectOption('all');
     });
     await run('toolbar',async()=>{
       await fixture('选择文字后显示快捷工具条。\n');
@@ -712,7 +731,7 @@ const results = [];
       for(const [mode,action] of [['preview','cancel'],['live-preview','escape'],['source','outside'],['preview','empty']]) {
         const original='未保存的想法不应提前改动这段文字。\n';
         const {menu,input}=await setupIdea(mode,original,'这段文字');
-        await input.fill(action==='empty'?'   \n   ':'还没有保存的草稿');
+        await input.fill(action==='outside'?'':action==='empty'?'   \n   ':'还没有保存的草稿');
         assert.equal(await data(),original);
         if(action==='cancel')await menu.getByRole('button',{name:'取消',exact:true}).click();
         if(action==='escape')await input.press('Escape');
@@ -724,6 +743,57 @@ const results = [];
         }
         await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));await assertScope(false);
         assert.equal(await data(),original);assert.equal(await page.locator('.inkstone-annotation-modal').count(),0);
+      }
+    });
+    await run('thought-command-shares-composer',async()=>{
+      const original='命令面板与快捷条共用同一个想法输入层。\n';
+      await fixture(original);await selectEditorText('共用同一个想法输入层');await rememberScope();
+      await command('add-note');
+      const menu=page.locator('.inkstone-annotation-menu');await menu.waitFor();
+      assert.equal(await page.locator('.inkstone-annotation-modal').count(),0);
+      assert.equal(await menu.locator('.inkstone-annotation-menu-quote').textContent(),'共用同一个想法输入层');
+      await assertScope(true);assert.equal(await data(),original);
+      await menu.getByRole('button',{name:'取消',exact:true}).click();await assertScope(false);
+      assert.equal(await data(),original);
+    });
+    await run('sidebar-dirty-thought-source-reactivation',async()=>{
+      const original='<u class="inkstone-underline">已有观点</u>[^inkstone-1]\n\n'+('回到原文继续阅读。\n\n'.repeat(20))+'[^inkstone-1]: 原来的想法\n';
+      await fixture(original);await command('show-annotations');
+      await page.locator('.inkstone-annotation-sidebar').getByLabel('筛选标注颜色').selectOption('all');
+      await page.locator('.inkstone-annotation-card').first().getByRole('button',{name:'编辑',exact:true}).click();
+      const menu=page.locator('.inkstone-annotation-menu');await menu.getByRole('button',{name:'编辑想法',exact:true}).click();
+      const input=menu.getByRole('textbox',{name:'想法内容',exact:true});await input.fill('从侧栏写到一半的想法');
+      await page.locator('[data-inkstone-qa] .markdown-source-view').click({position:{x:80,y:150}});
+      await page.waitForFunction(()=>app.workspace.activeLeaf?.view?.getViewType()==='markdown');
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      assert.equal(await menu.count(),1,'Reactivating the same source pane must retain a dirty sidebar thought');
+      assert.equal(await input.inputValue(),'从侧栏写到一半的想法');assert.equal(await data(),original);
+      await input.press('Escape');assert.equal(await menu.count(),0);assert.equal(await data(),original);
+    });
+    await run('thought-draft-incidental-dismissal',async()=>{
+      for(const mode of ['preview','source']) {
+        const original='滚动正文时，保留正在输入的想法。\n\n'+('后面的正文用于滚动与回看。\n\n'.repeat(80));
+        const {menu,input}=await setupIdea(mode,original,'正在输入的想法');
+        await input.fill('尚未保存的阅读思考');
+        await menu.getByRole('button',{name:'蓝色',exact:true}).click();
+        await page.evaluate(()=>{
+          window.__inkstoneQaDirtyMenu=document.querySelector('.inkstone-annotation-menu');
+          const view=app.plugins.plugins['inkstone-annotations'].currentView();
+          const scroller=view.contentEl.querySelector(view.getMode()==='preview'?'.markdown-preview-view':'.cm-scroller');
+          scroller.scrollTop=120;
+          scroller.dispatchEvent(new Event('scroll'));
+        });
+        assert.equal(await page.evaluate(()=>document.querySelector('.inkstone-annotation-menu')===window.__inkstoneQaDirtyMenu),true,'Scrolling must preserve the same dirty composer');
+        assert.equal(await input.inputValue(),'尚未保存的阅读思考');
+        await page.mouse.click(45,45);
+        assert.equal(await menu.count(),1,'An incidental outside click must not discard a dirty thought');
+        assert.equal(await input.inputValue(),'尚未保存的阅读思考');
+        assert.equal(await menu.getByRole('button',{name:'蓝色',exact:true}).getAttribute('aria-pressed'),'true');
+        assert.equal(await data(),original);await assertScope(true);
+        await menu.getByRole('button',{name:'取消',exact:true}).click();
+        await page.waitForFunction(()=>!document.querySelector('.inkstone-annotation-menu'));await assertScope(false);
+        assert.equal(await data(),original,'Explicit cancel must still write nothing');
+        await page.evaluate(()=>{delete window.__inkstoneQaDirtyMenu;});
       }
     });
     await run('selection-idea-stale-draft-protection',async()=>{
@@ -833,7 +903,7 @@ const results = [];
       await page.locator('.inkstone-annotation-sidebar').waitFor();assert((await page.locator('.inkstone-annotation-sidebar').textContent()).includes('已有划线'));
       await page.evaluate(()=>{const leaf=app.workspace.getLeavesOfType('markdown').find(leaf=>leaf.view.file===app.workspace.getActiveFile())||app.workspace.getLeavesOfType('markdown')[0];app.workspace.setActiveLeaf(leaf,{focus:true});});
       await selectEditorText('已有划线');await page.locator('.inkstone-selection-toolbar').getByRole('button',{name:'更多',exact:true}).click();
-      await page.locator('.menu-item').filter({has:page.locator('.menu-item-title',{hasText:'移除标注'})}).click();
+      await page.locator('.menu-item').filter({has:page.locator('.menu-item-title',{hasText:'删除标注'})}).click();
       await page.waitForFunction(()=>!app.workspace.getLeaf(false).view.getViewData().includes('inkstone-underline'));
       assert.equal(await data(),'已有划线，其他正文。\n');
       const original='快照变化后，旧工具条必须拒绝写入。\n';await fixture(original);await selectEditorText('旧工具条');
@@ -854,5 +924,8 @@ const results = [];
     });
     if(results.some(result=>!result.passed))process.exitCode=1;
     console.log(JSON.stringify({app:await page.title(),results},null,2));
-  } finally { await browser.close(); }
+  } finally {
+    try { if(savedNativeMenus)await page.evaluate(value=>app.vault.setConfig('nativeMenus',value),nativeMenus); }
+    finally { await browser.close(); }
+  }
 })().catch(error=>{console.error(error);process.exitCode=1;});

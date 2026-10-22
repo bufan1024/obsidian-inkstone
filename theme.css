@@ -1,5 +1,5 @@
 /*
- * Inkstone / 墨读 1.3.7 — a quiet, monochrome reading theme.
+ * Inkstone / 墨读 1.3.8 — a quiet, monochrome reading theme.
  * Light mode only. Uses Obsidian's native font overrides and readable-line-width setting.
  * No network resources, scripts, or plugin dependencies. License: MIT.
  */
@@ -287,19 +287,39 @@ body.theme-light {
   --embed-border-start: 2px solid var(--inkstone-rule);
 }
 
-/* Keep refreshes small; Obsidian's insertion event is a functional animation. */
-body.theme-light,
-body.theme-light *:not(.node-insert-event),
-body.theme-light *::before,
-body.theme-light *::after {
+/* Quiet native controls without disabling functional or third-party animations. */
+.theme-light :is(.workspace-tab-header, .nav-file-title, .nav-folder-title, .menu, .prompt, .modal, .clickable-icon, button, input, textarea, select, .checkbox-container):not(.node-insert-event) {
   animation: none !important;
   transition: none !important;
+}
+
+.theme-light :is(.markdown-preview-view, .cm-scroller) {
   scroll-behavior: auto !important;
+}
+
+/* Native loading bars normally start at zero width and grow through animation. */
+.theme-light .is-loading::before {
+  animation: none !important;
+  width: var(--inkstone-space-8);
+}
+
+.theme-light .notice {
+  --text-accent: #ffffff;
+  --text-accent-hover: #ffffff;
+}
+
+.theme-light .notice-cta {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
 }
 
 /* Scope typography to notes so controls and navigation retain native sizing. */
 .theme-light .workspace {
   --inkstone-native-font-size: var(--font-text-size, 16px);
+}
+
+.theme-light .workspace-leaf-content[data-type="markdown"] {
+  container: inkstone-note / inline-size;
 }
 
 .theme-light :is(.markdown-preview-view, .markdown-source-view.mod-cm6) {
@@ -344,6 +364,12 @@ body.theme-light *::after {
 .theme-light :is(.markdown-rendered a, .cm-hmd-internal-link, .cm-link, .cm-url) {
   text-underline-offset: 0.18em;
   text-decoration-thickness: 1px;
+}
+
+.theme-light .markdown-rendered a.internal-link:not(.is-unresolved),
+.theme-light .markdown-source-view.mod-cm6 .cm-hmd-internal-link:not(.is-unresolved),
+.theme-light .markdown-source-view.mod-cm6 .cm-hmd-internal-link:not(.is-unresolved) .cm-underline {
+  text-decoration-style: dotted;
 }
 
 .theme-light :is(.markdown-rendered mark, .cm-highlight) {
@@ -471,6 +497,10 @@ body.theme-light *::after {
   outline-offset: 2px;
 }
 
+.theme-light :is(input, textarea, select):focus-visible {
+  box-shadow: none;
+}
+
 .theme-light :is(input, textarea):is(:invalid, .is-invalid),
 .theme-light .setting-item.mod-warning {
   border: 2px solid var(--inkstone-ink);
@@ -478,12 +508,15 @@ body.theme-light *::after {
 
 .theme-light .markdown-rendered img {
   max-width: 100%;
+}
+
+.theme-light .markdown-rendered img:not([height]) {
   height: auto;
 }
 
-@media (max-width: 600px) {
-  body.theme-light {
-    --file-margins: var(--inkstone-space-6) 20px 48px;
+@container inkstone-note (max-width: 600px) {
+  .theme-light :is(.markdown-preview-view, .markdown-source-view.mod-cm6) {
+    --file-margins: var(--inkstone-space-6) clamp(16px, 5cqi, 24px) 48px;
     --h1-size: 1.5em;
     --h2-size: 1.25em;
     --inline-title-size: 1.6em;
@@ -500,6 +533,10 @@ body.theme-light *::after {
     --background-secondary: #ffffff;
     --file-line-width: 100%;
     --inkstone-font-size: 12pt;
+  }
+
+  .theme-light :is(.markdown-preview-view, .markdown-source-view.mod-cm6) {
+    --file-margins: 0;
   }
 
   .theme-light .callout,
