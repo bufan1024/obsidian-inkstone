@@ -8,7 +8,7 @@ Inkstone is a light-only Obsidian theme for focused long-form reading. It uses a
 
 **[市场安装与更新（推荐）](#安装与更新)** · **[主题市场](https://community.obsidian.md/themes/inkstone)** · **[插件市场](https://community.obsidian.md/plugins/inkstone-annotations)** · **[标注使用说明](annotations/README.md)**
 
-当前本地源码：**主题 1.3.8／标注插件 1.1.8（未发布）**；已发布版本仍为 **1.3.7／1.1.7**。下文新交互对应本地源码。白底、深灰正文，默认 1.75 倍行高、40em 行宽；字体和字号跟随 Obsidian「设置 → 外观」。只想阅读时，可以单独安装纯 CSS 主题。
+标注插件 **1.1.8** 已在[独立发行仓库](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.1.8)发布；市场同步与审核状态以插件市场页面为准。主题已发布版本仍为 **1.3.7**，当前源码 **1.3.8 尚未发布**。下文标注交互对应插件 1.1.8，主题排版优化对应本地 1.3.8 源码。白底、深灰正文，默认 1.75 倍行高、40em 行宽；字体和字号跟随 Obsidian「设置 → 外观」。只想阅读时，可以单独安装纯 CSS 主题。
 
 ## 看两段演示就能开始
 
@@ -61,7 +61,7 @@ Inkstone is a light-only Obsidian theme for focused long-form reading. It uses a
 
 如果暂时无法使用市场，可使用以下方式。
 
-下载并解压 [Release 合集](https://github.com/bufan1024/obsidian-inkstone/releases/latest)，或克隆仓库。**先关闭 Obsidian**，在解压目录或仓库目录运行（需要 Python 3）：
+下载并解压 [Release 合集](https://github.com/bufan1024/obsidian-inkstone/releases/latest)，或克隆仓库。已发布的 `Inkstone-Reading-Kit-1.3.7.zip` 仍包含主题 1.3.7 和插件 1.1.7，不含新插件；获取插件 1.1.8 请使用[独立插件 Release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.1.8)或当前源码。**先关闭 Obsidian**，在解压目录或仓库目录运行（需要 Python 3）：
 
 ```sh
 # 首次安装；可先加 --dry-run 查看计划

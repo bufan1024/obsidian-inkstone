@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · English
 
-Underlines, four highlight colors, footnote thoughts, a current-note sidebar, and Markdown excerpt export for Obsidian. Local source is **plugin 1.1.8 / theme 1.3.8 (unreleased)**; published versions remain **plugin 1.1.7 / theme 1.3.7**. The new interactions below apply to local source. Requires Obsidian **1.10.6 or later**.
+Underlines, four highlight colors, footnote thoughts, a current-note sidebar, and Markdown excerpt export for Obsidian. Plugin **1.1.8** is published; check the plugin marketplace page for its sync and review status. The latest published companion theme remains **1.3.7**; local theme source **1.3.8 is unreleased**. The annotation interactions below apply to plugin 1.1.8. Requires Obsidian **1.10.6 or later**.
 
 The interface is currently in Chinese. This guide preserves the actual labels and gives their English meanings.
 
@@ -47,6 +47,8 @@ Your vault/
 Use your actual configuration folder if it differs from `.obsidian`. Avoid an extra nested `inkstone-annotations` directory. After a first manual installation, reopen Obsidian, open **Settings → Community plugins**, turn off Restricted mode if needed, and enable **Inkstone Annotations**. Restart if it does not appear. A standalone theme package does not include JavaScript or add annotation controls.
 
 For a manual update, quit Obsidian, back up the old files, and replace only the three runtime files above. Keep `data.json`.
+
+The published `Inkstone-Reading-Kit-1.3.7.zip` still contains plugin 1.1.7, not 1.1.8. Obtain the new plugin from its standalone release or the current source checkout.
 
 When using the source repository or reading kit, run this from its root directory:
 

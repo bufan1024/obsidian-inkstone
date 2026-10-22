@@ -1,6 +1,6 @@
 # 安装与更新 Inkstone 墨读
 
-当前本地源码为 Inkstone **主题 1.3.8／标注插件 1.1.8（未发布）**；已发布版本仍为 **主题 1.3.7／插件 1.1.7**。下文新交互对应本地源码。主题是纯 CSS，可单独安装；标注、侧栏、摘录导出、快捷条和按屏翻页需要启用插件。最低 Obsidian 版本为 **1.10.6**。
+Inkstone 标注插件 **1.1.8** 已在[独立发行仓库](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.1.8)发布；市场同步与审核状态以插件市场页面为准。主题已发布版本仍为 **1.3.7**，当前源码 **1.3.8 尚未发布**。下文标注交互对应插件 1.1.8，主题排版优化对应本地 1.3.8 源码。主题是纯 CSS，可单独安装；标注、侧栏、摘录导出、快捷条和按屏翻页需要启用插件。最低 Obsidian 版本为 **1.10.6**。
 
 **社区目录状态（2026-10-21）：** 插件 **1.1.7** 自动审核已完成（**Completed**），[公开页面](https://community.obsidian.md/plugins/inkstone-annotations)显示 **Review Satisfactory**，**Add to Obsidian** 已可用。打开页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示安装并启用插件。下文的 GitHub 安装可作为备选。
 
@@ -18,7 +18,7 @@
 
 ### 1. 获取文件
 
-下载[已发布 Release](https://github.com/bufan1024/obsidian-inkstone/releases/latest) 中的主题与标注合集，文件名为 `Inkstone-Reading-Kit-1.3.7.zip`；本地源码 1.3.8／1.1.8 尚未发布。解压后进入其中含有 `scripts/` 的目录。
+下载[已发布 Release](https://github.com/bufan1024/obsidian-inkstone/releases/latest) 中的主题与标注合集，文件名为 `Inkstone-Reading-Kit-1.3.7.zip`。该合集仍包含主题 1.3.7 和插件 1.1.7，不含插件 1.1.8；新插件请从[独立插件 Release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.1.8)获取三个运行文件，按下文手动更新，或使用当前源码中的安装脚本。主题 1.3.8 尚未发布。使用合集时，解压后进入其中含有 `scripts/` 的目录。
 
 也可以克隆源码：
 
