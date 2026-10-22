@@ -6,15 +6,15 @@ The annotation plugin and the Inkstone theme require separate community director
 
 ## Current status (2026-10-22)
 
-Plugin **1.1.8** is published in the [standalone distribution repository](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.1.8). Check the public directory page for its sync and review status; the completed review below applies to 1.1.7 and does not establish approval of 1.1.8. Theme source **1.3.8** remains unreleased; the latest published theme and reading kit remain **1.3.7**. That kit still contains plugin **1.1.7**, not 1.1.8.
+Plugin **1.1.8** is published in the [standalone distribution repository](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.1.8). Theme **1.3.8** and `Inkstone-Reading-Kit-1.3.8.zip` are published in the [theme repository](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.3.8). The reading kit contains theme **1.3.8** and plugin **1.1.8**.
 
-The automated review for plugin **1.1.7** (commit `49e9dd8`) is **Completed**. Its [public directory page](https://community.obsidian.md/plugins/inkstone-annotations) shows **Review Satisfactory** and **Health Excellent**, with **Add to Obsidian** available. Open that page → choose **Add to Obsidian** → follow the prompts in Obsidian to install and enable the plugin. GitHub Releases remain a manual installation alternative.
+The automated review for plugin **1.1.8** is **Completed**. Its [public directory page](https://community.obsidian.md/plugins/inkstone-annotations) shows **Review Satisfactory** and **Health Excellent**, with **Add to Obsidian** available. Open that page → choose **Add to Obsidian** → follow the prompts in Obsidian to install and enable the plugin. GitHub Releases remain a manual installation alternative.
 
 Non-blocking plugin recommendations and CSS warnings remain; they have not all been addressed.
 
-The automated review for theme **1.3.7** (commit `701b0a6`) is also **Completed**. Its [public theme page](https://community.obsidian.md/themes/inkstone) shows **Review Satisfactory** and **Health Excellent**, with **Light only** support. Open the theme page → choose **Add to Obsidian** → follow the prompts in Obsidian to use or select Inkstone. GitHub installation remains an alternative.
+The theme is listed with **Light only** support. Check its [public theme page](https://community.obsidian.md/themes/inkstone) for the **1.3.8** sync and review status. The earlier **1.3.7** review (commit `701b0a6`) completed on **2026-10-21**; that result does not establish approval of 1.3.8. Open the theme page → choose **Add to Obsidian** → follow the prompts in Obsidian to use or select Inkstone. GitHub installation remains an alternative.
 
-Non-blocking README-language and CSS warnings remain in the theme review.
+The earlier theme review included non-blocking README-language and CSS warnings.
 
 ## Repository and release
 
@@ -37,9 +37,9 @@ The plugin ID remains `inkstone-annotations`, including for existing manual inst
 
 ### Theme release and submission
 
-The theme uses [obsidian-inkstone](https://github.com/bufan1024/obsidian-inkstone), with `preview.png` as its submission screenshot and **Light only** as the supported color scheme. The latest published theme is **`1.3.7`**; local theme manifest **`1.3.8`** remains unreleased. When publishing a theme update, use its manifest version as a bare release tag and attach **`theme.css`** and **`manifest.json`** directly.
+The theme uses [obsidian-inkstone](https://github.com/bufan1024/obsidian-inkstone), with `preview.png` as its submission screenshot and **Light only** as the supported color scheme. The latest published theme is **`1.3.8`**, using the bare manifest-version tag and direct **`theme.css`** and **`manifest.json`** release attachments. The same release also provides theme, plugin, and reading-kit ZIPs with a checksum file.
 
-The `1.3.7` release uses the same commit (`701b0a6`) and runtime files as the retained historical `v1.3.7` tag. It also retains the three existing ZIP packages and their checksum file so reading-kit downloads remain compatible. Keep the old tag and download assets; do not replace their contents when updating documentation.
+The historical `1.3.7` release uses the same commit (`701b0a6`) and runtime files as the retained `v1.3.7` tag. Its reading kit contains theme **1.3.7** and plugin **1.1.7**. Keep those old tags and download assets unchanged; use the **1.3.8** kit for current installations.
 
 ## Submit through Obsidian Community
 

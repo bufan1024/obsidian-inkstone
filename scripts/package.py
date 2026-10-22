@@ -122,7 +122,7 @@ def kit_readme(theme_version: str, plugin_version: str) -> bytes:
 
    Windows 可使用 `py -3` 替换 `python3`。可以先加 `--dry-run` 查看计划。
 3. 重新打开 Obsidian。在「设置 → 第三方插件」关闭受限模式，并手动启用「Inkstone Annotations」。安装程序不会自动启用第三方插件。
-4. 选中普通文字，使用快捷标注条、右键「墨读：标注与备注…」或同名命令添加标注。
+4. 选中普通文字，使用快捷标注条、右键「墨读：标注与想法…」或同名命令添加标注。
 
 首次完整安装会选用 Inkstone 浅色主题并开启可读行宽。只安装主题可添加 `--theme-only`；只安装插件可添加 `--plugin-only`，不会切换主题、配色或行宽。使用自定义配置文件夹时添加 `--config-dir "配置文件夹名"`。
 

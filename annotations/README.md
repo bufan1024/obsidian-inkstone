@@ -2,7 +2,7 @@
 
 简体中文 · [English](README.en.md)
 
-为 Obsidian 笔记提供下划线、四色高亮、脚注备注、当前笔记标注侧栏与摘录导出。插件 **1.1.8** 已发布，市场同步与审核状态以插件市场页面为准。配套主题已发布版本仍为 **1.3.7**，当前主题源码 **1.3.8 尚未发布**。下文标注交互对应插件 1.1.8，最低 Obsidian 版本仍为 **1.10.6**。
+为 Obsidian 笔记提供下划线、四色高亮、脚注备注、当前笔记标注侧栏与摘录导出。插件 **1.1.8** 已发布，市场审核已完成（**Completed / Review Satisfactory**）。配套主题 **1.3.8** 已在 [GitHub Release](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.3.8) 发布，市场同步与审核状态以主题市场页面为准。最低 Obsidian 版本仍为 **1.10.6**。
 
 标注直接保存在当前 Markdown 中，兼容旧版 Inkstone 标记。插件只使用本地 Obsidian API，不调用网络，不需要账户或其他插件；实时预览使用 Obsidian 自带的 CodeMirror，用户无需安装依赖。Inkstone 主题仍是纯 CSS，可独立使用。
 
@@ -44,7 +44,7 @@
 
 首次手动安装后，在「设置 → 第三方插件」中按需关闭「受限模式」，启用「Inkstone Annotations」。未出现在列表中时，重启 Obsidian，并检查目录是否多嵌套了一层。`.obsidian` 是隐藏目录；使用自定义配置文件夹时替换为实际名称。独立主题包不包含 JavaScript，也不会添加操作入口。
 
-更新前关闭 Obsidian 并备份旧文件，只替换上述三个文件，保留 `data.json`。已发布的 `Inkstone-Reading-Kit-1.3.7.zip` 仍包含插件 1.1.7，不含 1.1.8；获取新插件请使用独立插件 Release 或当前源码。使用完整仓库或合集中的安装脚本时，可运行 `python3 scripts/install.py --vault "/你的笔记库路径" --update --plugin-only`，先加 `--dry-run` 可查看计划。它保留当前主题、配色、行宽偏好和插件数据，不会自动启用插件。完整步骤见[安装与更新教程](https://github.com/bufan1024/obsidian-inkstone/blob/main/INSTALL.md)。
+更新前关闭 Obsidian 并备份旧文件，只替换上述三个文件，保留 `data.json`。完整[阅读合集](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.3.8) `Inkstone-Reading-Kit-1.3.8.zip` 也包含插件 **1.1.8** 和主题 **1.3.8**。使用完整仓库或合集中的安装脚本时，可运行 `python3 scripts/install.py --vault "/你的笔记库路径" --update --plugin-only`，先加 `--dry-run` 可查看计划。它保留当前主题、配色、行宽偏好和插件数据，不会自动启用插件。完整步骤见[安装与更新教程](https://github.com/bufan1024/obsidian-inkstone/blob/main/INSTALL.md)。
 
 ## 添加标注与备注
 

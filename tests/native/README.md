@@ -1,6 +1,6 @@
 # 原生 Obsidian 验收
 
-`verify-upgrade.cjs` 与 `verify-theme.cjs` 连接独立 Obsidian 测试实例，实际操作编辑器、阅读视图、标注面板、侧栏与主题界面。它们会创建测试笔记、修改测试库配置；交互脚本还会重载插件，因此只应连接专用测试库。当前对应本地待发布的主题 **1.3.8／插件 1.1.8**；精确运行结果见根目录 [VALIDATION.md](../../VALIDATION.md)。
+`verify-upgrade.cjs` 与 `verify-theme.cjs` 连接独立 Obsidian 测试实例，实际操作编辑器、阅读视图、标注面板、侧栏与主题界面。它们会创建测试笔记、修改测试库配置；交互脚本还会重载插件，因此只应连接专用测试库。对应主题 **1.3.8／插件 1.1.8** 的既有验证记录见根目录 [VALIDATION.md](../../VALIDATION.md)；本次发布未重跑原生检查。
 
 ## 准备
 

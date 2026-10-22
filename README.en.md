@@ -6,7 +6,7 @@ A light Obsidian theme for long reading sessions, with an optional plugin for hi
 
 **[Marketplace installation and updates (recommended)](#install-or-update)** · **[Theme listing](https://community.obsidian.md/themes/inkstone)** · **[Plugin listing](https://community.obsidian.md/plugins/inkstone-annotations)** · **[Annotation guide](annotations/README.en.md)**
 
-Annotation plugin **1.1.8** is published in the [standalone distribution repository](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.1.8); check the plugin marketplace page for its sync and review status. The latest published theme remains **1.3.7**; local theme source **1.3.8 is unreleased**. The annotation interactions below apply to plugin 1.1.8, while theme layout improvements apply to local 1.3.8 source. Requires Obsidian **1.10.6 or later**. The plugin interface is currently in Chinese; this guide keeps its actual labels alongside English explanations. Install the theme and plugin separately from Obsidian's community directory; GitHub Releases and the install script are alternatives.
+Theme **1.3.8** is published on [GitHub Releases](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.3.8); check the [theme marketplace page](https://community.obsidian.md/themes/inkstone) for its sync and review status. Annotation plugin **1.1.8** is published in the [standalone distribution repository](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.1.8), and its marketplace review is **Completed / Review Satisfactory**. Requires Obsidian **1.10.6 or later**. The plugin interface is currently in Chinese; this guide keeps its actual labels alongside English explanations. Install the theme and plugin separately from Obsidian's community directory; GitHub Releases and the install script are alternatives.
 
 The theme uses a white background, dark gray text, a default line height of 1.75, and a reading width of 40em. Font and font size follow Obsidian's native Appearance settings. The theme is plain CSS and works without the plugin.
 
@@ -59,7 +59,7 @@ New theme and plugin versions are not installed automatically. Update them separ
 
 Use this method if the marketplace is temporarily unavailable.
 
-Download and extract the [published reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/latest), `Inkstone-Reading-Kit-1.3.7.zip`, or clone this repository. That kit still contains theme 1.3.7 and plugin 1.1.7; it does not include the new plugin. To obtain plugin 1.1.8, use its [standalone release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.1.8) or the current source checkout. Theme 1.3.8 remains unreleased. Open the target vault in Obsidian at least once so its configuration folder exists, then **quit Obsidian before installing or updating**.
+Download and extract the [published reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.3.8), `Inkstone-Reading-Kit-1.3.8.zip`, or clone this repository. This kit contains theme **1.3.8** and plugin **1.1.8**. The plugin is also available from its [standalone release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.1.8). Open the target vault in Obsidian at least once so its configuration folder exists, then **quit Obsidian before installing or updating**.
 
 Run these commands from the extracted kit or repository directory. Python 3 is required; Node.js is not required to install the built files.
 
