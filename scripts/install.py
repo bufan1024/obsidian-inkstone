@@ -152,16 +152,37 @@ def apply_plan(plan):
             raise InstallError("规划后文件发生变化，请关闭 Obsidian 后重新运行：{}".format(plan.config / change.relative))
     existing = [change for change in plan.changes if change.previous is not None]
     backup = None
-    if existing:
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
-        backup = Path("inkstone-backups") / (stamp + "-" + uuid.uuid4().hex[:8])
-        for change in existing:
-            checked_file(plan.config, backup / change.relative)
-        # Back up every replaced file before changing any installed file.
-        for change in existing:
-            atomic_write(plan.config, backup / change.relative, change.previous)
-    for change in plan.changes:
-        atomic_write(plan.config, change.relative, change.content)
+    backup_complete = False
+    completed = []
+    try:
+        if existing:
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+            backup = Path("inkstone-backups") / (stamp + "-" + uuid.uuid4().hex[:8])
+            for change in existing:
+                checked_file(plan.config, backup / change.relative)
+            # Back up every replaced file before changing any installed file.
+            for change in existing:
+                atomic_write(plan.config, backup / change.relative, change.previous)
+            backup_complete = True
+        for change in plan.changes:
+            atomic_write(plan.config, change.relative, change.content)
+            completed.append(change.relative)
+    except (InstallError, OSError):
+        if existing and not backup_complete:
+            print("旧文件备份未完成，尚未替换任何安装文件。关闭 Obsidian，解决错误后重新运行。", file=sys.stderr)
+        else:
+            if completed:
+                print("失败前已完成写入的文件（相对于 {}）：".format(plan.config), file=sys.stderr)
+                for relative in completed:
+                    print("  {}".format(relative.as_posix()), file=sys.stderr)
+            else:
+                print("尚未替换任何安装文件。", file=sys.stderr)
+            if backup is not None:
+                print("原文件备份：{}".format(plan.config / backup), file=sys.stderr)
+                print("恢复时请关闭 Obsidian，将备份文件按相同相对路径复制回配置目录。备份只含原有文件；新增文件请对照已写入列表检查。", file=sys.stderr)
+            else:
+                print("本次没有旧文件备份。请关闭 Obsidian，检查上述已写入文件，解决错误后重新运行相同命令。", file=sys.stderr)
+        raise
     return plan.config / backup if backup is not None else None
 
 

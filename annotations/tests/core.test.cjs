@@ -485,3 +485,99 @@ test('HTML-looking text inside a comment or attribute cannot pollute following p
     assert.throws(() => validateSelection(select(document, 'div')), /[\u4e00-\u9fff]/, document);
   }
 });
+
+test('selection validation keeps mixed block and inline protection around existing annotations', () => {
+  for (const newline of ['\n', '\r\n']) {
+    const document = [
+      '\uFEFF---', 'property: hidden-property', '---', '',
+      '> > ~~~~html', 'hidden-fence', '> > ~~~~', '',
+      '`inline-start', 'hidden-code`', '',
+      '$math-start', 'hidden-math$', '',
+      '[label](', 'hidden-destination', ')', '',
+      '<!-- hidden-comment <div> -->',
+      '<img alt="hidden-attribute <div>"> allowed-image',
+      '<div><!-- </div> -->hidden-wrapper</div>', '',
+      '<u class="inkstone-underline">existing</u>[^inkstone-1] allowed-tail &amp;', '',
+      '[^inkstone-1]: hidden-definition',
+    ].join(newline);
+    for (const text of ['allowed-image', 'existing', 'allowed-tail', '&amp;']) {
+      assert.equal(validateSelection(select(document, text)), text, `${JSON.stringify(newline)} ${text}`);
+    }
+    for (const text of ['hidden-property', 'hidden-fence', 'hidden-code', 'hidden-math', 'hidden-destination', 'hidden-comment', 'hidden-attribute', 'hidden-wrapper', 'hidden-definition', '[^inkstone-1]', '&am']) {
+      assert.throws(() => validateSelection(select(document, text)), /[\u4e00-\u9fff]/, `${JSON.stringify(newline)} ${text}`);
+    }
+    const plan = planFor(document, 'allowed-tail');
+    assert.equal(applyChanges(document, plan.changes), document.replace('allowed-tail', '<u class="inkstone-underline">allowed-tail</u>'));
+  }
+});
+
+test('selection validation preserves source-line protection with isolated CRs', () => {
+  for (const [document, text] of [
+    ['```\rhidden\r```\rvisible\n', 'visible'],
+    ['---\rtitle: value\r---\rvisible\n', 'visible'],
+    ['> > ~~~\r> ~~~\rhidden\r> > ~~~\rvisible\n', 'hidden'],
+  ]) assert.equal(validateSelection(select(document, text)), text, document);
+  for (const [document, text] of [
+    ['```\rhidden\r```\rvisible\n', 'hidden'],
+    ['visible\r```\n', 'visible'],
+  ]) assert.throws(() => validateSelection(select(document, text)), /[\u4e00-\u9fff]/, document);
+});
+
+test('repeated annotation checks keep inline code and unmatched backtick protection within a shared paragraph', () => {
+  const mark = text => `<u class="inkstone-underline">${text}</u>`;
+  for (const newline of ['\n', '\r\n']) {
+    const document = mark('first') + ' `hidden-one ' + mark('hidden-mark') + '` '
+      + '``hidden-two ` mismatched`` ' + mark('second') + ' \\`escaped ' + mark('escaped-visible')
+      + ' `unclosed ' + mark('hidden-unclosed') + newline + 'ordinary-after ' + mark('third');
+    assert.deepEqual(parseAnnotations(document).map(record => record.text), ['first', 'second', 'escaped-visible', 'third']);
+    for (const text of ['first', 'second', 'escaped-visible', 'ordinary-after', 'third']) {
+      assert.equal(validateSelection(select(document, text)), text);
+    }
+    for (const text of ['hidden-one', 'hidden-mark', 'hidden-two', 'hidden-unclosed']) {
+      assert.throws(() => validateSelection(select(document, text)), /[\u4e00-\u9fff]/);
+    }
+  }
+});
+
+test('shared paragraph math checks preserve delimiters, escapes and unmatched expressions', () => {
+  const mark = text => `<u class="inkstone-underline">${text}</u>`;
+  for (const [open, close] of [['$', '$'], ['$$', '$$'], ['\\(', '\\)'], ['\\[', '\\]']]) {
+    for (const newline of ['\n', '\r\n']) {
+      const document = mark('first') + ' ' + open + 'hidden-math ' + mark('hidden-mark')
+        + newline + 'hidden-continuation' + close + ' ' + mark('last');
+      assert.deepEqual(parseAnnotations(document).map(record => record.text), ['first', 'last']);
+      for (const text of ['first', 'last']) assert.equal(validateSelection(select(document, text)), text);
+      for (const text of ['hidden-math', 'hidden-mark', 'hidden-continuation']) {
+        assert.throws(() => validateSelection(select(document, text)), /[\u4e00-\u9fff]/);
+      }
+    }
+  }
+  for (const prefix of ['\\$escaped-dollar', '$unclosed-dollar', '\\(unclosed-parenthesis', '\\[unclosed-bracket', '$ spaced-dollar$', '$digit-close$1', '`$code-only$`']) {
+    const document = prefix + ' ' + mark('visible');
+    assert.deepEqual(parseAnnotations(document).map(record => record.text), ['visible'], prefix);
+    assert.equal(validateSelection(select(document, 'visible')), 'visible', prefix);
+  }
+  const separateParagraphs = '$unclosed ' + mark('first') + '\n\ntext$ ' + mark('second');
+  assert.deepEqual(parseAnnotations(separateParagraphs).map(record => record.text), ['first', 'second']);
+  for (const text of ['first', 'second']) assert.equal(validateSelection(select(separateParagraphs, text)), text);
+});
+
+test('same-line annotation checks preserve wiki and footnote boundaries when source lines change', () => {
+  const mark = text => `<u class="inkstone-underline">${text}</u>`;
+  for (const newline of ['\n', '\r\n']) {
+    const document = [
+      mark('first') + ' [[' + mark('hidden-wiki') + ']] [^' + mark('hidden-footnote') + '] ' + mark('same-line'),
+      '    ' + mark('hidden-indent'),
+      '\\[[escaped-wiki]] \\[^escaped-footnote] \\![[' + mark('escaped-embed') + ']] ' + mark('next-line'),
+      '[^definition]: ' + mark('hidden-definition'),
+      mark('last'),
+    ].join(newline);
+    assert.deepEqual(parseAnnotations(document).map(record => record.text), ['first', 'same-line', 'escaped-embed', 'next-line', 'last']);
+    for (const text of ['first', 'same-line', 'escaped-wiki', 'escaped-footnote', 'escaped-embed', 'next-line', 'last']) {
+      assert.equal(validateSelection(select(document, text)), text);
+    }
+    for (const text of ['hidden-wiki', 'hidden-footnote', 'hidden-indent', 'hidden-definition']) {
+      assert.throws(() => validateSelection(select(document, text)), /[\u4e00-\u9fff]/);
+    }
+  }
+});

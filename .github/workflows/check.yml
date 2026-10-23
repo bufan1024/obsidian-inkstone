@@ -21,7 +21,7 @@ jobs:
           node annotations/build.mjs
           git diff --exit-code -- annotations/main.js annotations/styles.css annotations/examples/ theme.css
       - name: Test annotations
-        run: node --test annotations/tests/*.test.cjs
+        run: node --test annotations/tests/*.test.cjs tests/native/*.test.cjs
       - name: Test installer and distribution exporter
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
       - name: Verify release packages
