@@ -26,3 +26,15 @@ jobs:
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
       - name: Verify release packages
         run: python3 scripts/package.py
+
+  windows-installer:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Test installer on Windows
+        run: python -m unittest discover -s scripts -p 'test_install.py' -v

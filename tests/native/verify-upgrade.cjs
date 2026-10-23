@@ -260,7 +260,11 @@ const results = [];
       await sidebar.getByLabel('筛选标注颜色').selectOption('yellow');
       assert.equal(await sidebar.locator('.inkstone-annotation-card').count(),1);
       await sidebar.getByRole('button',{name:'导出全部',exact:true}).click();
-      await page.waitForFunction(sourcePath=>app.workspace.getActiveFile()?.path!==sourcePath,sourcePath);
+      const expectedPath=sourcePath.replace(/\.md$/,'-墨读摘录.md');
+      await page.waitForFunction(expectedPath=>{
+        const view=app.plugins.plugins['inkstone-annotations'].currentView();
+        return view.file?.path===expectedPath&&view.getViewData().startsWith('# ');
+      },expectedPath);
       const exported=await data();
       for(const text of ['筛选中可见的观点','筛选隐藏的观点','黄色想法','蓝色想法'])assert(exported.includes(text));
       assert.equal(await page.evaluate(async sourcePath=>app.vault.read(app.vault.getAbstractFileByPath(sourcePath)),sourcePath),original);

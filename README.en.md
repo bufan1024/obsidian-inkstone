@@ -6,7 +6,7 @@ A light Obsidian theme for long reading sessions, with an optional plugin for hi
 
 **[Marketplace installation and updates (recommended)](#install-or-update)** · **[Theme listing](https://community.obsidian.md/themes/inkstone)** · **[Plugin listing](https://community.obsidian.md/plugins/inkstone-annotations)** · **[Annotation guide](annotations/README.en.md)**
 
-Theme **1.3.8** is published on [GitHub Releases](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.3.8); check the [theme marketplace page](https://community.obsidian.md/themes/inkstone) for its sync and review status. Annotation plugin **1.1.8** is published in the [standalone distribution repository](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.1.8), and its marketplace review is **Completed / Review Satisfactory**. Requires Obsidian **1.10.6 or later**. The plugin interface is currently in Chinese; this guide keeps its actual labels alongside English explanations. Install the theme and plugin separately from Obsidian's community directory; GitHub Releases and the install script are alternatives.
+Theme **1.4.0** is published on [GitHub Releases](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.4.0); check the [theme marketplace page](https://community.obsidian.md/themes/inkstone) for its sync and review status. Annotation plugin **1.2.0** is published in the [standalone distribution repository](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0); check the plugin marketplace page for this version's synchronization and review status. Requires Obsidian **1.10.6 or later**. Choose Chinese (the default) or English in plugin settings, then restart the plugin to refresh command names. Install the theme and plugin separately from Obsidian's community directory; GitHub Releases and the install script are alternatives.
 
 The theme uses a white background, dark gray text, a default line height of 1.75, and a reading width of 40em. Font and font size follow Obsidian's native Appearance settings. The theme is plain CSS and works without the plugin.
 
@@ -28,13 +28,13 @@ If the animation does not play, see the [thought composer](preview-selection-ide
 
 ![Edit annotations from the sidebar, change colors, write thoughts, filter, and export](assets/review-export.gif)
 
-1. Choose **「更多 → 打开标注侧栏」 (More → Open annotation sidebar)**, or run **「墨读：打开标注侧栏」** from the command palette.
-2. Click **「编辑」 (Edit)** below an excerpt. The same small menu opens beside that button. A color or underline selected on its first screen takes effect immediately.
-3. Choose **「写想法」 / 「编辑想法」** to write or edit a note in the popover. Save applies the selected style and thought together; Cancel writes nothing.
-4. Filter by color or underline, then return to **「全部标注」 (All annotations)**. The list scrolls independently, keeping the filter and export controls visible. Updates to the same note preserve those controls and their keyboard focus.
-5. Click **「导出全部」 (Export all)**. The header shows filtered and total counts; the export description also states the total. A new Markdown file opens beside the original note, containing all annotations, thoughts, and a source link. Export ignores the sidebar filter and adds a number if the filename already exists.
+1. Choose **「更多 → 打开标注侧栏」 (More → Open annotation sidebar)** or run the matching command. Click **「编辑」 (Edit)** to change a mark or thought.
+2. Search excerpt or thought text, then combine color, underline, and **「仅有想法」 (Thoughts only)** filters. All conditions must match; switching notes resets them.
+3. Click **「导出全部」 (Export all)**. A new Markdown file beside the original includes **all** annotations and thoughts, regardless of filters, with source links, a snapshot time, and heading paths. Existing files are kept, with a number added to the new filename.
 
 See the [sidebar screenshot](preview-workspace.png) or the [sidebar and export guide](annotations/README.en.md#sidebar-and-excerpt-export).
+
+Use Previous / Next annotation to review the current note without wrapping at either end; neither command has a default hotkey. Collect excerpts from a note or folder through the command palette, or select multiple items in the file explorer and use its context menu. These are manual snapshots with no automatic synchronization. The [full guide](annotations/README.en.md#commands-and-undo) lists all 17 commands and their stable IDs.
 
 ## Install or update
 
@@ -59,7 +59,10 @@ New theme and plugin versions are not installed automatically. Update them separ
 
 Use this method if the marketplace is temporarily unavailable.
 
-Download and extract the [published reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.3.8), `Inkstone-Reading-Kit-1.3.8.zip`, or clone this repository. This kit contains theme **1.3.8** and plugin **1.1.8**. The plugin is also available from its [standalone release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.1.8). Open the target vault in Obsidian at least once so its configuration folder exists, then **quit Obsidian before installing or updating**.
+<details>
+<summary>Expand script and manual installation steps</summary>
+
+Download and extract the [published reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.4.0), `Inkstone-Reading-Kit-1.4.0.zip`, or clone this repository. This kit contains theme **1.4.0** and plugin **1.2.0**. The plugin is also available from its [standalone release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0). Open the target vault in Obsidian at least once so its configuration folder exists, then **quit Obsidian before installing or updating**.
 
 Run these commands from the extracted kit or repository directory. Python 3 is required; Node.js is not required to install the built files.
 
@@ -124,6 +127,8 @@ Replace `.obsidian` if you use a custom configuration folder. Avoid an extra nes
 
 For a first manual installation, select Inkstone and light mode under Appearance, enable **Readable line length** under Editor, and enable the plugin as described above. For an update, quit Obsidian, back up the old runtime files, and replace only the two theme files or three plugin files shown above. Keep plugin `data.json` and your preferences. To restore an installation, quit Obsidian and copy the backed-up files to their original paths; see the [backup and restore reference](INSTALL.md) for details.
 
+</details>
+
 ## Install with Codex or another AI assistant
 
 Prefer [marketplace installation](#install-or-update). For an AI-assisted script installation, use an assistant that can access local files and run commands. Replace the vault path before sending this prompt. With a chat-only assistant, follow the marketplace steps yourself or use [manual installation](#manual-installation).
@@ -168,6 +173,9 @@ The installer does not call an AI API or require an API key.
 
 ## Try it with one note
 
+<details>
+<summary>Expand the sample note and practice steps</summary>
+
 Copy the [annotation example](examples/划线与备注示例.md) into your vault, or create a note with these separate paragraphs:
 
 ```markdown
@@ -180,11 +188,13 @@ After a chapter, write down one small thing to try today.
 
 Select a phrase in the first paragraph, choose **「写想法」**, select yellow, type a note, and save. Underline a phrase in the second paragraph using **「划线样式 → 下划线」 (Annotation style → Underline)**. Click the first annotation to try its menu, then open the sidebar and use **「定位原文」 (Locate source)** or **「编辑」 (Edit)**. Export the excerpts to a new file.
 
-After you edit thought text or its draft style, incidental outside clicks, scrolling, and reactivating the same source keep the draft open. **「取消」 (Cancel)** and `Esc` explicitly discard it without writing. Unchanged menus still dismiss on outside click or scroll. Switching notes or changing the source prevents stale saves.
+After you edit thought text or its draft style, incidental outside clicks, scrolling, and reactivating the same source keep the draft open. For an existing annotation, **「取消」 (Cancel)** returns to the parent menu and retains local input; closing the whole menu, `Esc`, or canceling a new selection's composer discards the draft without writing. Unchanged menus still dismiss on outside click or scroll. Switching notes or changing the source prevents stale saves and temporarily keeps the thought's plain text and quote in this session. Run Restore session thought draft to copy it, then reselect the current source text before saving. At most 10 files are retained, one draft per file; restarting the plugin clears them. See [draft recovery](annotations/README.en.md#recover-a-thought-draft-from-this-session).
 
 The **「墨读：写想法」 (Write a thought)** command uses the same small composer. **「墨读：标注与想法」 (Annotation and thought)**, the ribbon icon, and the full context-menu entry open the larger panel. Existing command IDs and shortcut bindings are retained.
 
 The sidebar follows the newly opened export. Seeing no annotations there is expected: the export is ordinary Markdown. Switch back to the source note to keep managing annotations. Exports are snapshots and do not synchronize with later edits.
+
+</details>
 
 ## Reading settings
 
@@ -192,7 +202,12 @@ Use Obsidian **Settings → Appearance** for font and font size. Inkstone uses f
 
 Enable **「墨水屏显示」 (E-ink display)** to show all four colors as light gray, distinguished by solid, double, dotted, and dashed underlines. This changes the display without changing colors saved in the note. With the plugin disabled, Inkstone still renders saved annotation markup and native footnotes.
 
+Plugin settings offer an explicit Chinese / English choice and custom display names for the four colors. Aliases such as “Key idea” change menu, sidebar, and export labels without changing saved colors, HTML, or footnotes. See the [plugin settings guide](annotations/README.en.md#toolbar-reading-settings-and-paging).
+
 Reading view, Live Preview, and source mode adjust margins to the Markdown pane width, leaving room for text in narrow splits. Resolved internal links use dotted decoration to distinguish them from solid annotation underlines. Images keep explicitly specified heights; automatic proportional sizing applies only when no height is specified. Native notices retain readable text and actions, and loading indicators remain visible without animation.
+
+<details>
+<summary>CSS customization and static screenshots</summary>
 
 For CSS customization, create `.obsidian/snippets/inkstone-reading.css` and enable it under Appearance → CSS snippets:
 
@@ -215,6 +230,8 @@ When controlling width or line height through CSS, set the plugin presets to **�
 
 Reading and interaction screenshots use macOS Obsidian 1.14.4. Color, grayscale, and [typography detail](preview-details.png) screenshots were captured with 1.12.4. All content comes from project examples.
 
+</details>
+
 ## Compatibility and verification
 
 Inkstone primarily targets light mode. Local verification used macOS Obsidian **1.12.4 and 1.14.4**, covering reading view, Live Preview, source mode, annotation interactions, installation, updates, and packaging. See the [validation record](VALIDATION.md). Narrow-window and synthetic touch tests do not establish support on native mobile apps or physical e-ink devices; neither has been tested. Other Obsidian versions and third-party interfaces may need adjustments. Screen refresh and ghosting depend on the device and operating system.
@@ -227,6 +244,9 @@ Use native undo and redo in the editor. **「墨读：撤销上次标注」 (Und
 
 ## Development and packaging
 
+<details>
+<summary>Expand build, test, and packaging commands</summary>
+
 Built files require no Node.js installation. To change the source, use Node.js **22 or later**:
 
 ```sh
@@ -237,6 +257,8 @@ python3 scripts/package.py
 ```
 
 The build and installer have no third-party package dependencies and make no network requests. The plugin uses the [public Obsidian API](https://github.com/obsidianmd/obsidian-api) and CodeMirror modules bundled with Obsidian. Packaging writes standalone theme, standalone plugin, and reading-kit ZIPs under `dist/`. Generated QA files and release ZIPs are excluded from the source repository.
+
+</details>
 
 ## Obsidian community directory
 

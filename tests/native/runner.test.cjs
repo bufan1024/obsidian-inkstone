@@ -99,3 +99,14 @@ for (const selection of [[], ['all']]) {
     }
   });
 }
+
+test('the reading workflow runner also rejects a zero-case selection', () => {
+  const result = spawnSync(process.execPath, [path.join(__dirname, 'verify-reading-workflow.cjs'), 'does-not-exist'], {
+    encoding: 'utf8', timeout: 10000,
+    env: {...process.env, INKSTONE_PLAYWRIGHT:playwright, INKSTONE_CDP:'isolated-runner-test://no-network'}
+  });
+  assert.ifError(result.error);
+  assert.equal(result.status,1);
+  assert.match(result.stderr,/Unknown case: does-not-exist/);
+  assert.doesNotMatch(result.stdout,/^PASS /m);
+});
