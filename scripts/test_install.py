@@ -150,6 +150,97 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse((self.config / "app.json").exists())
         self.assertFalse((self.config / "community-plugins.json").exists())
 
+    def test_failed_update_reports_backup_and_completed_files(self):
+        self.run_install()
+        theme = self.config / "themes/Inkstone/theme.css"
+        plugin = self.config / "plugins/inkstone-annotations/main.js"
+        theme.write_bytes(b"old theme\n")
+        plugin.write_bytes(b"old plugin\n")
+        preferences = self.config / "appearance.json"
+        preferences.write_bytes(b'{ "cssTheme": "Other", "theme": "obsidian" }\n')
+        replace = install.os.replace
+
+        def fail_plugin(source, target):
+            if Path(target) == plugin.resolve():
+                raise OSError("simulated runtime write failure")
+            return replace(source, target)
+
+        output, errors = io.StringIO(), io.StringIO()
+        with mock.patch.object(install.os, "replace", side_effect=fail_plugin), contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+            status = install.main(["--vault", str(self.vault), "--update"])
+
+        self.assertEqual(status, 1)
+        self.assertEqual(theme.read_bytes(), (self.repo / "theme.css").read_bytes())
+        self.assertEqual(plugin.read_bytes(), b"old plugin\n")
+        self.assertEqual(preferences.read_bytes(), b'{ "cssTheme": "Other", "theme": "obsidian" }\n')
+        self.assertEqual((self.vault / "阅读.md").read_text(), "这篇笔记不能被修改。\n")
+        backup = next((self.config / "inkstone-backups").iterdir())
+        self.assertEqual((backup / "themes/Inkstone/theme.css").read_bytes(), b"old theme\n")
+        self.assertEqual((backup / "plugins/inkstone-annotations/main.js").read_bytes(), b"old plugin\n")
+        self.assertIn(str(backup.resolve()), errors.getvalue())
+        self.assertIn("  themes/Inkstone/theme.css\n", errors.getvalue())
+        self.assertNotIn("  plugins/inkstone-annotations/main.js\n", errors.getvalue())
+        self.assertIn("关闭 Obsidian", errors.getvalue())
+        self.assertIn("复制回", errors.getvalue())
+        self.assertIn("simulated runtime write failure", errors.getvalue())
+        self.assertNotIn("更新完成", output.getvalue())
+
+    def test_failed_first_install_reports_completed_files_without_backup(self):
+        plugin = self.config / "plugins/inkstone-annotations/main.js"
+        failure = OSError("simulated first install failure")
+        replace = install.os.replace
+
+        def fail_plugin(source, target):
+            if Path(target) == plugin.resolve():
+                raise failure
+            return replace(source, target)
+
+        errors = io.StringIO()
+        with mock.patch.object(install.os, "replace", side_effect=fail_plugin), contextlib.redirect_stderr(errors):
+            with self.assertRaises(OSError) as caught:
+                install.install(self.vault)
+
+        self.assertIs(caught.exception, failure)
+        self.assertTrue((self.config / "themes/Inkstone/theme.css").is_file())
+        self.assertFalse(plugin.exists())
+        self.assertFalse((self.config / "inkstone-backups").exists())
+        self.assertFalse((self.config / "appearance.json").exists())
+        self.assertIn("  themes/Inkstone/theme.css\n", errors.getvalue())
+        self.assertIn("  themes/Inkstone/manifest.json\n", errors.getvalue())
+        self.assertIn("没有旧文件备份", errors.getvalue())
+        self.assertIn("重新运行", errors.getvalue())
+        self.assertNotIn("原文件备份：", errors.getvalue())
+
+    def test_failed_backup_reports_no_installed_files_were_replaced(self):
+        self.run_install()
+        theme = self.config / "themes/Inkstone/theme.css"
+        plugin = self.config / "plugins/inkstone-annotations/main.js"
+        theme.write_bytes(b"old theme\n")
+        plugin.write_bytes(b"old plugin\n")
+        replace = install.os.replace
+
+        def fail_plugin_backup(source, target):
+            relative = Path(target).relative_to(self.config.resolve())
+            if relative.parts[0] == "inkstone-backups" and relative.parts[-3:] == ("plugins", "inkstone-annotations", "main.js"):
+                raise OSError("simulated backup write failure")
+            return replace(source, target)
+
+        errors = io.StringIO()
+        with mock.patch.object(install.os, "replace", side_effect=fail_plugin_backup), contextlib.redirect_stderr(errors):
+            status = install.main(["--vault", str(self.vault), "--update"])
+
+        self.assertEqual(status, 1)
+        self.assertEqual(theme.read_bytes(), b"old theme\n")
+        self.assertEqual(plugin.read_bytes(), b"old plugin\n")
+        backup = next((self.config / "inkstone-backups").iterdir())
+        self.assertEqual((backup / "themes/Inkstone/theme.css").read_bytes(), b"old theme\n")
+        self.assertFalse((backup / "plugins/inkstone-annotations/main.js").exists())
+        self.assertIn("备份未完成", errors.getvalue())
+        self.assertIn("尚未替换任何安装文件", errors.getvalue())
+        self.assertIn("simulated backup write failure", errors.getvalue())
+        self.assertNotIn("原文件备份：", errors.getvalue())
+        self.assertNotIn("复制回", errors.getvalue())
+
     def test_update_ignores_invalid_unrelated_preference_json(self):
         preferences = {"appearance.json": b"{invalid", "app.json": b"\xffnot UTF-8 JSON"}
         for relative, content in preferences.items():

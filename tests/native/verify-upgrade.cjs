@@ -922,6 +922,7 @@ const results = [];
       await page.evaluate(async()=>{const leaf=app.workspace.getLeaf(false),state=leaf.getViewState();await leaf.setViewState({...state,state:{...state.state,mode:'source',source:false}});});
       await selectEditorText('重新标注');assert.equal(await page.locator('.inkstone-selection-toolbar').count(),1);assert.equal(await data(),same);
     });
+    assert(results.length > 0, 'Unknown case: ' + selectedCase);
     if(results.some(result=>!result.passed))process.exitCode=1;
     console.log(JSON.stringify({app:await page.title(),results},null,2));
   } finally {
