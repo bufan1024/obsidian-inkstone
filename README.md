@@ -217,4 +217,4 @@ Inkstone [主题](https://community.obsidian.md/themes/inkstone)和[标注插件
 
 排版与留白参考 OpenDesign 的 [Paper](https://github.com/nexu-io/open-design/blob/main/design-systems/paper/DESIGN.md)、[Editorial](https://github.com/nexu-io/open-design/blob/main/design-systems/editorial/DESIGN.md)、[Minimal](https://github.com/nexu-io/open-design/blob/main/design-systems/minimal/DESIGN.md)，以留白分层、统一间距和随界面字号缩放的标注文字整理正文、菜单与侧栏，沿用原有字体与配色。结构参考 [Obsidian 官方主题文档](https://docs.obsidian.md/Themes/App+themes/Build+a+theme)。工具条文字动作参考[微信读书官方阅读页](https://weread.qq.com/web/reader/33332bf05cbba0333b1efb4)，按 Obsidian 功能适配。
 
-[MIT License](LICENSE)。反馈问题请附 Obsidian 版本、系统、使用视图、最小笔记片段及其他 CSS 代码片段情况。
+[MIT License](LICENSE)。反馈问题请附 Obsidian、Inkstone 主题及标注插件的版本、系统、使用视图、最小笔记片段及其他 CSS 代码片段情况。
