@@ -140,6 +140,37 @@ function colors(metrics) {
       return { normalContrast: normal.contrast, hoverContrast: hover.contrast };
     });
 
+    await run('native-motion-scope', async () => {
+      try {
+        await page.evaluate(() => {
+          const host = document.createElement('div');
+          host.id = 'inkstone-theme-qa-motion';
+          host.className = 'workspace-leaf-content';
+          host.dataset.type = 'third-party-motion-fixture';
+          host.innerHTML = '<button data-motion="third-party">Button</button><input data-motion="third-party"><textarea data-motion="third-party"></textarea><select data-motion="third-party"><option>Option</option></select><div class="workspace-tab-header" data-motion="native">Tab</div><div class="workspace-tab-header node-insert-event" data-motion="sentinel">Insert sentinel</div>';
+          const style = document.createElement('style');
+          style.id = 'inkstone-theme-qa-motion-style';
+          style.textContent = '@keyframes inkstone-qa-local-motion { from { opacity: .8; } to { opacity: 1; } } #inkstone-theme-qa-motion [data-motion] { animation: inkstone-qa-local-motion 2s linear infinite; transition: opacity 2s linear; }';
+          document.head.append(style);
+          document.body.append(host);
+        });
+        const metrics = await page.evaluate(() => [...document.querySelectorAll('#inkstone-theme-qa-motion [data-motion]')].map(node => {
+          const style = getComputedStyle(node);
+          return { tag: node.tagName.toLowerCase(), kind: node.dataset.motion, animation: style.animationName, transition: style.transitionProperty };
+        }));
+        const thirdParty = metrics.filter(item => item.kind === 'third-party');
+        assert.equal(thirdParty.length, 4, 'The compatibility fixture must exercise all four plain control types');
+        assert(thirdParty.every(item => item.animation === 'inkstone-qa-local-motion' && item.transition === 'opacity'), 'Theme must preserve a third-party leaf control\'s own motion: ' + JSON.stringify(thirdParty));
+        const native = metrics.find(item => item.kind === 'native');
+        assert(native?.animation === 'none' && native.transition === 'none', 'Known native chrome should retain quiet motion: ' + JSON.stringify(native));
+        const sentinel = metrics.find(item => item.kind === 'sentinel');
+        assert(sentinel?.animation === 'inkstone-qa-local-motion' && sentinel.transition === 'opacity', 'node-insert-event must remain available to native insertion observers: ' + JSON.stringify(sentinel));
+        return metrics;
+      } finally {
+        await page.evaluate(() => { document.getElementById('inkstone-theme-qa-motion')?.remove(); document.getElementById('inkstone-theme-qa-motion-style')?.remove(); });
+      }
+    });
+
     await run('loading-indicator', async () => {
       await fixture();
       await page.evaluate(() => {
@@ -170,6 +201,128 @@ function colors(metrics) {
       });
       assert(Math.abs(dimensions.width - 200) <= 1 && Math.abs(dimensions.height - 100) <= 1, 'Native ![[QA/tall.svg|200x100]] should render at 200x100: ' + JSON.stringify(dimensions));
       return dimensions;
+    });
+
+    for (const mode of ['reading', 'live-preview']) {
+      for (const width of [320, 600]) await run(`overflow-${mode}-${width}`, async () => {
+        const longToken = 'inkstone_overflow_' + '0123456789'.repeat(36);
+        const formula = `\\begin{matrix}${Array(24).fill('x_1+x_2').join(' & ')}\\end{matrix}`;
+        const samples = [
+          { kind: 'table', text: `Wide native table fixture.\n\n| First column | Second column | Third column |\n| --- | --- | --- |\n| ${longToken} | ${longToken} | ${longToken} |\n\nCursor outside the table.\n` },
+          { kind: 'code', text: `Long native code fixture.\n\n\`\`\`text\n${longToken}\n\`\`\`\n\nCursor outside the code.\n` },
+          { kind: 'math', text: `Wide native formula fixture.\n\n$$\n${formula}\n$$\n\nCursor outside the formula.\n` },
+        ];
+        const measurements = [];
+        try {
+          await setPaneWidth(width);
+          for (const sample of samples) {
+            await fixture(sample.text, mode);
+            if (mode === 'live-preview') {
+              await page.evaluate(() => { const editor = window.__inkstoneThemeQa.leaf.view.editor; editor.setCursor({ line: editor.lastLine(), ch: 0 }); });
+              await settle();
+            }
+            await page.waitForFunction(({ mode, kind, longToken, formula }) => {
+              const view = window.__inkstoneThemeQa.leaf.view.contentEl;
+              const scroller = view.querySelector(mode === 'reading' ? '.markdown-preview-view' : '.cm-scroller');
+              if (!scroller || scroller.getBoundingClientRect().height <= 0) return false;
+              if (kind === 'math') {
+                const target = scroller.querySelector('.math-block mjx-container');
+                const graphic = target?.querySelector('mjx-math, svg');
+                const matrix = target?.querySelector('mjx-mtable, [data-mml-node="mtable"]');
+                if (!graphic || !matrix || graphic.getBoundingClientRect().height <= 0) return false;
+                const normalize = value => value.replaceAll(String.fromCharCode(92), '').replace(/\s+/g, '');
+                const source = graphic.getAttribute('data-latex');
+                if (source && normalize(source) !== normalize(formula)) return false;
+                // Cold MathJax can insert complete CHTML before its stylesheet:
+                // its custom table tags are still inline and wrap as plain text.
+                if (matrix.localName === 'mjx-mtable' && getComputedStyle(matrix).display === 'inline') return false;
+                return target.querySelectorAll('mjx-mtd, [data-mml-node="mtd"]').length === 24;
+              }
+              const target = kind === 'table' ? scroller.querySelector('table') : mode === 'reading' ? scroller.querySelector('pre code') : [...scroller.querySelectorAll('.cm-line.HyperMD-codeblock')].find(node => node.textContent.includes(longToken));
+              return Boolean(target && target.getBoundingClientRect().height > 0);
+            }, { mode, kind: sample.kind, longToken, formula });
+            if (sample.kind === 'math') { await page.evaluate(() => document.fonts.ready); await settle(); }
+            const metrics = await page.evaluate(({ mode, kind, longToken }) => {
+              const view = window.__inkstoneThemeQa.leaf.view.contentEl;
+              const scroller = view.querySelector(mode === 'reading' ? '.markdown-preview-view' : '.cm-scroller');
+              const target = kind === 'table' ? scroller.querySelector('table') : kind === 'math' ? scroller.querySelector('.math-block mjx-container, .math-block .MathJax') : mode === 'reading' ? scroller.querySelector('pre') : [...scroller.querySelectorAll('.cm-line.HyperMD-codeblock')].find(node => node.textContent.includes(longToken));
+              if (!target) throw Error('Missing native ' + kind + ' fixture');
+              const owners = [];
+              for (let node = target; node && node !== scroller; node = node.parentElement) {
+                const style = getComputedStyle(node);
+                if (['auto', 'scroll'].includes(style.overflowX) && node.scrollWidth > node.clientWidth + 2) owners.push({ className: node.className, width: node.clientWidth, scrollWidth: node.scrollWidth });
+              }
+              const rect = target.getBoundingClientRect(), pane = scroller.getBoundingClientRect(), style = getComputedStyle(target);
+              const math = kind === 'math' ? { source: target.querySelector('mjx-math, svg')?.getAttribute('data-latex'), graphicWidth: target.querySelector('mjx-math, svg')?.getBoundingClientRect().width, matrixDisplay: getComputedStyle(target.querySelector('mjx-mtable, [data-mml-node="mtable"]')).display } : undefined;
+              return { kind, rootOverflow: scroller.scrollWidth - scroller.clientWidth, owners, contained: rect.left >= pane.left - 2 && rect.right <= pane.right + 2, height: rect.height, lineHeight: parseFloat(style.lineHeight), mathError: kind === 'math' && Boolean(target.querySelector('[data-mml-node="merror"], mjx-merror, .mjx-merror, .MathJax_Error')), ...(math ? { math } : {}) };
+            }, { mode, kind: sample.kind, longToken });
+            assert(!metrics.mathError, 'The overflow fixture must render a valid formula, not a MathJax error: ' + JSON.stringify(metrics));
+            assert(metrics.rootOverflow <= 2, `A ${width}px ${mode} pane must not gain horizontal page overflow for ${sample.kind}: ` + JSON.stringify(metrics));
+            const wrappedLiveCode = mode === 'live-preview' && sample.kind === 'code' && metrics.contained && metrics.height >= metrics.lineHeight * 2;
+            assert(metrics.owners.length > 0 || wrappedLiveCode, `Wide ${sample.kind} must scroll locally (or wrap in the native live editor): ` + JSON.stringify(metrics));
+            measurements.push(metrics);
+          }
+          return { width, measurements };
+        } finally { await restorePane(); }
+      });
+    }
+
+    await run('keyboard-focus-reading', async () => {
+      await fixture('[Keyboard focus start](https://example.invalid/inkstone-focus-start)\n\n[Keyboard focus target](https://example.invalid/inkstone-focus-target)\n');
+      const links = page.locator('.markdown-preview-view a.external-link');
+      await links.first().focus();
+      await page.keyboard.press('Tab');
+      const metrics = await links.nth(1).evaluate(node => {
+        const style = getComputedStyle(node);
+        return { focused: document.activeElement === node, focusVisible: node.matches(':focus-visible'), width: parseFloat(style.outlineWidth), style: style.outlineStyle, offset: parseFloat(style.outlineOffset), color: style.outlineColor, backgrounds: window.__inkstoneThemeQa.backgrounds(node) };
+      });
+      assert(metrics.focused && metrics.focusVisible, 'Tab must move native reading focus to the next link');
+      assert(metrics.width >= 2 && !['none', 'hidden'].includes(metrics.style) && metrics.offset >= 2, 'Keyboard focus needs a visible, offset outline: ' + JSON.stringify(metrics));
+      assert(colors(metrics).contrast >= 3, 'Keyboard focus outline must contrast with its actual backdrop');
+      return metrics;
+    });
+
+    await run('print-multipage-styles', async () => {
+      const longToken = 'inkstone_print_' + '0123456789'.repeat(28);
+      const sections = Array.from({ length: 24 }, (_, index) => `## Print section ${index + 1}\n\n${('Multi-page print fixture keeps every paragraph in the reading flow. 中文段落应完整保留，分页之后仍可接续阅读。 ').repeat(7)}\n`).join('\n');
+      const text = `# Native multi-page print fixture\n\nPrint opening marker.\n\n> [!note] Print callout\n> Keep this short callout together.\n\n\`\`\`text\n${longToken}\n\`\`\`\n\n| First column | Second column | Third column |\n| --- | --- | --- |\n| ${longToken} | ${longToken} | ${longToken} |\n\n${sections}\nPrint closing marker.\n`;
+      await fixture(text, 'reading');
+      try {
+        await page.evaluate(() => { window.__inkstoneThemeQa.leaf.view.contentEl.querySelector('.markdown-preview-view').scrollTop = 0; });
+        await page.waitForFunction(() => {
+          const preview = window.__inkstoneThemeQa.leaf.view.contentEl.querySelector('.markdown-preview-view');
+          return ['pre code', 'table th', '.callout', 'h2'].every(selector => preview.querySelector(selector));
+        });
+        // Native print CSS can hide the workspace and unmount virtual sections.
+        // Preserve actual rendered Markdown before switching media; this checks
+        // its print styles, while native PDF completeness is verified separately.
+        await page.evaluate(() => {
+          const host = document.createElement('div'); host.id = 'inkstone-theme-qa-print'; host.className = 'print';
+          host.append(window.__inkstoneThemeQa.leaf.view.contentEl.querySelector('.markdown-preview-view').cloneNode(true));
+          document.body.append(host);
+        });
+        await page.emulateMedia({ media: 'print' });
+        await settle();
+        const metrics = await page.evaluate(() => {
+          const view = window.__inkstoneThemeQa.leaf.view, content = document.getElementById('inkstone-theme-qa-print');
+          const read = selector => { const node = content.querySelector(selector); if (!node) throw Error('Missing printable fixture: ' + selector); return { node, style: getComputedStyle(node) }; };
+          const paragraph = read('.markdown-preview-view p'), pre = read('.markdown-preview-view pre'), code = read('.markdown-preview-view pre code'), table = read('.markdown-preview-view table'), header = read('.markdown-preview-view th'), callout = read('.markdown-preview-view .callout'), heading = read('.markdown-preview-view h2');
+          return {
+            printing: matchMedia('print').matches, background: getComputedStyle(document.body).getPropertyValue('--background-primary').trim(),
+            font: parseFloat(paragraph.style.fontSize), margins: getComputedStyle(paragraph.node.closest('.markdown-preview-view')).getPropertyValue('--file-margins').trim(),
+            sourceLength: view.getViewData().length, closingMarker: view.getViewData().includes('Print closing marker.'),
+            preBreak: pre.style.breakInside, calloutBreak: callout.style.breakInside, headingBreak: heading.style.breakAfter,
+            codeWhiteSpace: code.style.whiteSpace, codeWrap: code.style.overflowWrap, preOverflow: pre.style.overflowX,
+            tableLayout: table.style.tableLayout, tableWidth: table.node.getBoundingClientRect().width, wrapperWidth: table.node.parentElement.getBoundingClientRect().width, headerWhiteSpace: header.style.whiteSpace,
+          };
+        });
+        assert(metrics.printing && metrics.background === '#ffffff' && Math.abs(metrics.font - 16) <= 0.1 && metrics.margins === '0', 'Print must use white paper, 12pt body text and zero note margins: ' + JSON.stringify(metrics));
+        assert(metrics.sourceLength > 12000 && metrics.closingMarker, 'The print-style fixture must retain enough source for multiple pages and its closing marker');
+        assert(metrics.preBreak === 'avoid' && metrics.calloutBreak === 'avoid' && ['avoid', 'avoid-page'].includes(metrics.headingBreak), 'Print should keep short code/callouts together and headings with following content: ' + JSON.stringify(metrics));
+        assert(metrics.codeWhiteSpace === 'pre-wrap' && metrics.codeWrap === 'anywhere' && metrics.preOverflow === 'visible', 'Long code must wrap instead of being clipped by a print scroller: ' + JSON.stringify(metrics));
+        assert(metrics.tableLayout === 'fixed' && metrics.headerWhiteSpace !== 'nowrap' && metrics.tableWidth <= metrics.wrapperWidth + 2, 'Wide print tables must fit the printable column: ' + JSON.stringify(metrics));
+        return metrics;
+      } finally { await page.emulateMedia({ media: null }); await page.evaluate(() => document.getElementById('inkstone-theme-qa-print')?.remove()); }
     });
 
     for (const mode of modes) {
@@ -277,6 +430,9 @@ function colors(metrics) {
           const qa = window.__inkstoneThemeQa;
           app.plugins.plugins['inkstone-annotations']?.hideToolbars();
           document.getElementById('inkstone-theme-qa-font')?.remove();
+          document.getElementById('inkstone-theme-qa-motion')?.remove();
+          document.getElementById('inkstone-theme-qa-motion-style')?.remove();
+          document.getElementById('inkstone-theme-qa-print')?.remove();
           for (const notice of qa.notices) notice.hide();
           if (qa.loadingHost && !qa.loadingWasPresent) qa.loadingHost.classList.remove('is-loading');
           for (const [node, style] of qa.styles) { if (style === null) node.removeAttribute('style'); else node.setAttribute('style', style); }

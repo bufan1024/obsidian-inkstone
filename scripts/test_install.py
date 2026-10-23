@@ -64,11 +64,11 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual((self.config / "themes/Inkstone/theme.css").read_bytes(), (self.repo / "theme.css").read_bytes())
         for name in ("main.js", "styles.css", "manifest.json"):
             self.assertEqual((self.config / "plugins/inkstone-annotations" / name).read_bytes(), (self.repo / "annotations" / name).read_bytes())
-        self.assertEqual(json.loads((self.config / "appearance.json").read_text()), {"cssTheme": "Inkstone", "theme": "moonstone"})
-        self.assertEqual(json.loads((self.config / "app.json").read_text()), {"readableLineLength": True})
+        self.assertEqual(json.loads((self.config / "appearance.json").read_text(encoding="utf-8")), {"cssTheme": "Inkstone", "theme": "moonstone"})
+        self.assertEqual(json.loads((self.config / "app.json").read_text(encoding="utf-8")), {"readableLineLength": True})
         self.assertFalse((self.config / "community-plugins.json").exists())
         self.assertFalse((self.config / "inkstone-backups").exists())
-        self.assertEqual((self.vault / "阅读.md").read_text(), "这篇笔记不能被修改。\n")
+        self.assertEqual((self.vault / "阅读.md").read_text(encoding="utf-8"), "这篇笔记不能被修改。\n")
         self.assertIn("重启", output)
         self.assertIn("手动", output)
 
@@ -102,13 +102,13 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual((backups[0] / "themes/Inkstone/theme.css").read_bytes(), old_css)
         self.assertEqual((backups[0] / "appearance.json").read_bytes(), old_appearance)
         self.assertFalse((backups[0] / "plugins").exists())
-        settings = json.loads(appearance.read_text())
+        settings = json.loads(appearance.read_text(encoding="utf-8"))
         self.assertEqual(settings["custom"], {"enabled": True})
         self.assertEqual(settings["baseFontSize"], 21)
-        self.assertEqual(json.loads((self.config / "app.json").read_text())["alwaysUpdateLinks"], True)
-        self.assertEqual(plugin_data.read_text(), '{"monochrome":true}\n')
-        self.assertEqual(other_plugin_file.read_text(), "keep me\n")
-        self.assertEqual(enabled.read_text(), '["existing-plugin"]\n')
+        self.assertEqual(json.loads((self.config / "app.json").read_text(encoding="utf-8"))["alwaysUpdateLinks"], True)
+        self.assertEqual(plugin_data.read_text(encoding="utf-8"), '{"monochrome":true}\n')
+        self.assertEqual(other_plugin_file.read_text(encoding="utf-8"), "keep me\n")
+        self.assertEqual(enabled.read_text(encoding="utf-8"), '["existing-plugin"]\n')
 
     def test_update_replaces_runtime_and_preserves_personal_preferences(self):
         self.run_install()
@@ -139,7 +139,7 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual((self.config / "plugins/inkstone-annotations" / name).read_bytes(), (self.repo / "annotations" / name).read_bytes())
         backups = list((self.config / "inkstone-backups").iterdir())
         self.assertEqual(len(backups), 1)
-        self.assertEqual({str(path.relative_to(backups[0])) for path in backups[0].rglob("*") if path.is_file()}, set(runtime))
+        self.assertEqual({path.relative_to(backups[0]).as_posix() for path in backups[0].rglob("*") if path.is_file()}, set(runtime))
         for relative in runtime:
             self.assertEqual((backups[0] / relative).read_bytes(), b"old runtime\n")
 
@@ -173,7 +173,7 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(theme.read_bytes(), (self.repo / "theme.css").read_bytes())
         self.assertEqual(plugin.read_bytes(), b"old plugin\n")
         self.assertEqual(preferences.read_bytes(), b'{ "cssTheme": "Other", "theme": "obsidian" }\n')
-        self.assertEqual((self.vault / "阅读.md").read_text(), "这篇笔记不能被修改。\n")
+        self.assertEqual((self.vault / "阅读.md").read_text(encoding="utf-8"), "这篇笔记不能被修改。\n")
         backup = next((self.config / "inkstone-backups").iterdir())
         self.assertEqual((backup / "themes/Inkstone/theme.css").read_bytes(), b"old theme\n")
         self.assertEqual((backup / "plugins/inkstone-annotations/main.js").read_bytes(), b"old plugin\n")
@@ -286,7 +286,7 @@ class InstallerTests(unittest.TestCase):
         for name in ("main.js", "styles.css", "manifest.json"):
             self.assertEqual((self.config / "plugins/inkstone-annotations" / name).read_bytes(), (self.repo / "annotations" / name).read_bytes())
         backup = next((self.config / "inkstone-backups").iterdir())
-        self.assertEqual({str(path.relative_to(backup)) for path in backup.rglob("*") if path.is_file()}, {
+        self.assertEqual({path.relative_to(backup).as_posix() for path in backup.rglob("*") if path.is_file()}, {
             "plugins/inkstone-annotations/main.js", "plugins/inkstone-annotations/styles.css",
             "plugins/inkstone-annotations/manifest.json",
         })
