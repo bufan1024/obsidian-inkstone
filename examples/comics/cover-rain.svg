@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="840" viewBox="0 0 600 840" role="img" aria-labelledby="title desc">
+  <title id="title">一盏灯：漫画封面示例</title>
+  <desc id="desc">黑白线稿：雨夜列车的窗与一盏亮灯。Inkstone 原创排版示例。</desc>
+  <defs>
+    <pattern id="rain" width="28" height="34" patternUnits="userSpaceOnUse"><path d="M22 0L8 24" stroke="#aaa" stroke-width="1"/></pattern>
+    <pattern id="dots" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="0.9" fill="#666"/></pattern>
+  </defs>
+  <rect width="600" height="840" fill="#fff"/>
+  <rect x="24" y="24" width="552" height="792" fill="none" stroke="#202020" stroke-width="2"/>
+  <text x="48" y="65" font-family="sans-serif" font-size="14" letter-spacing="4" fill="#555">INKSTONE · COMIC STUDIES</text>
+  <path d="M48 84H552" stroke="#202020"/>
+  <text x="46" y="150" font-family="serif" font-size="53" font-weight="700" fill="#202020">一盏灯</text>
+  <text x="49" y="184" font-family="sans-serif" font-size="15" letter-spacing="4" fill="#555">A LIGHT LEFT ON / 02</text>
+  <rect x="48" y="214" width="504" height="516" fill="#eee" stroke="#202020" stroke-width="2"/>
+  <rect x="48" y="214" width="504" height="516" fill="url(#rain)"/>
+  <path d="M48 624L552 529V730H48Z" fill="url(#dots)"/>
+  <path d="M48 658L552 563M48 677L552 582M48 696L552 601" stroke="#202020" stroke-width="2"/>
+  <path d="M108 275H493V601L108 671Z" fill="#202020" stroke="#202020" stroke-width="4"/>
+  <rect x="131" y="298" width="339" height="246" rx="34" fill="#fff"/>
+  <rect x="144" y="311" width="313" height="220" rx="25" fill="#eee"/>
+  <path d="M149 464L205 414 250 445 284 389 342 432 397 403 454 450V526H148Z" fill="url(#dots)"/>
+  <path d="M155 320L143 368M198 312L165 416M267 311L237 404M330 311L313 366M419 315L377 458M451 365L413 488" stroke="#fff" stroke-width="4"/>
+  <path d="M168 366L186 310M252 460L283 365M365 409L386 344" stroke="#777"/>
+  <path d="M305 299V368" stroke="#202020" stroke-width="4"/>
+  <path d="M280 389L293 365H317L332 389Z" fill="#202020"/>
+  <path d="M292 393L272 423M307 396V433M320 393L342 422" stroke="#202020" stroke-width="2"/>
+  <path d="M140 566L468 508M140 585L468 527" stroke="#fff" stroke-width="2"/>
+  <text x="48" y="773" font-family="serif" font-size="18" fill="#202020">窗外的雨，慢慢有了归处。</text>
+  <text x="48" y="800" font-family="sans-serif" font-size="11" letter-spacing="2" fill="#555">ORIGINAL DEMO ART / NO. 002</text>
+</svg>

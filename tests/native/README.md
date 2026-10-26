@@ -1,6 +1,6 @@
 # 原生 Obsidian 验收
 
-`verify-upgrade.cjs`、`verify-theme.cjs` 与 `verify-reading-workflow.cjs` 连接独立 Obsidian 测试实例，实际操作编辑器、阅读视图、标注面板、侧栏与主题界面。它们会创建测试笔记、修改测试库配置；交互脚本还会重载插件，因此只应连接专用测试库。主题 **1.3.8／插件 1.1.8** 的历史验证，以及 **2026-10-23 三项修复候选的完整原生复验**，见根目录 [VALIDATION.md](../../VALIDATION.md)。
+`verify-upgrade.cjs`、`verify-theme.cjs`、`verify-reading-workflow.cjs` 与 `verify-comics.cjs` 连接独立 Obsidian 测试实例，实际操作编辑器、阅读视图、标注面板、侧栏与主题界面。它们会创建测试笔记、修改测试库配置；交互脚本还会重载插件，因此只应连接专用测试库。各轮历史验证与漫画主题验证见根目录 [VALIDATION.md](../../VALIDATION.md)。
 
 ## 准备
 
@@ -30,6 +30,7 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 INKSTONE_CDP=http://127.0.0.1:19227 node tests/native/verify-upgrade.cjs
 INKSTONE_CDP=http://127.0.0.1:19227 node tests/native/verify-theme.cjs
 INKSTONE_CDP=http://127.0.0.1:19227 node tests/native/verify-reading-workflow.cjs
+INKSTONE_CDP=http://127.0.0.1:19227 node tests/native/verify-comics.cjs
 ```
 
 也可在脚本后添加单个用例名，如交互脚本的 `reading-entities-and-embeds`、主题脚本的 `notice-cta-contrast`。主题脚本还可按前缀运行一组用例，例如 `pane-padding` 或 `native-font`：
@@ -89,6 +90,16 @@ Windows job 使用 Python 3.11 和 `python -m unittest discover -s scripts -p 't
 ## 阅读工作流回归
 
 `verify-reading-workflow.cjs` 检查摘录和想法搜索、组合筛选与完整导出、编辑／阅读视图的标注导航、会话草稿复制和明确放弃、章节来源与手动汇总、英文与自定义颜色名称、长名称布局，并测量 500／2000 条侧栏和 2000 标题的实际摘录导出。它只对专用库创建的测试文件做清理，结束后恢复设置与工作区；复制检查替换的是专用页面的 `writeText` 方法，不读取或改写系统剪贴板。单用例名必须完整匹配，零匹配返回非零。
+
+## 漫画主题回归
+
+`verify-comics.cjs` 只连接同名独立测试库，不依赖标注插件。它临时创建本地 SVG 和笔记，检查 `inkstone-comic` 的阅读／Live Preview 图片比例、显式尺寸与混排文字，以及独立的 52rem 阅读宽度和 68rem 书架宽度；检查 `inkstone-comic-strip` 的阅读视图无缝拼接。在 1200／600／320px 窗格中检查书架列数、边界、3:4 封面纸托、完整封面、封面在标题前的顺序和无外框卡片；实际折叠／展开外层书架与内层漫画卡片，确认收起时隐藏封面、重开后恢复 `display: contents` 及封面先于标题的布局；检查打印时容器可分页且单张卡片避免拆分。`comic-nav` 在阅读与 Live Preview 的 600／320px 窗格中检查原生标题、链接换行、折叠展开、键盘焦点与 Enter 跳转。另检查源码仍可编辑，以及普通笔记的尺寸和排版不受影响。
+
+作品详情新增 8 项检查：在阅读／Live Preview 的 1200／600／320px 窗格中，检查 68rem 详情宽度、封面 240px 与原始比例、宽屏封面与简介并列、窄屏上下排列、简介文字可读，以及原生有序章节目录、真实章节锚点与边界；另检查章节目录的 Tab 焦点和 Enter 跳转到非首个中文章节标题（带冒号），确认目标标题进入阅读视口且滚动位置大于零；检查简介与目录折叠展开，以及打印时简介不拆分、目录可分页、单条目录不拆分。共 25 项既有用例。
+
+双页阅读增加 11 项检查，总计 36 项：在阅读／Live Preview 的 1200／900／600／320px 窗格中检查独立的 `inkstone-comic-spread` 宽度、命名容器、图片比例与完整边界，以及按组件自身 960px 门槛选择双列／单列；另在宽窗格中的普通可读行宽笔记中检查仍为单列，避免只按窗口宽度判断。补充两种视图的原生折叠展开、打印时单列和按图片段落分页，以及三页奇数分组的原序、200×100 显式尺寸、图注可读与源码可编辑。
+
+可按完整名称或前缀筛选，例如 `reader`、`shelf-reading`、`shelf-keyboard-navigation`、`navigation`、`detail` 或 `spread`；零匹配返回非零。脚本结束后恢复布局、窗格样式、视口与临时文件。页面间距和窄屏结果属于桌面原生样式验收，不代表手机、实体墨水屏或实际 PDF 导出通过。
 
 ## 不连接应用的 runner 回归
 

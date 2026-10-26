@@ -4,15 +4,15 @@
 
 The annotation plugin and the Inkstone theme require separate community directory submissions. This document covers their repositories, releases, and submission states. A GitHub release or local test does not establish directory approval.
 
-## Current status (2026-10-23)
+## Current status (2026-10-26)
 
-Plugin **1.2.0** is published in the [standalone distribution repository](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0). Theme **1.4.0** and `Inkstone-Reading-Kit-1.4.0.zip` are published in the [theme repository](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.4.0). The reading kit contains theme **1.4.0** and plugin **1.2.0**.
+Plugin **1.2.0** is published in the [standalone distribution repository](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0). Theme **1.5.0** and `Inkstone-Reading-Kit-1.5.0.zip` are published in the [theme repository](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.5.0). The reading kit contains theme **1.5.0** and plugin **1.2.0**.
 
 The earlier automated review for plugin **1.1.8** completed on **2026-10-22**; that result does not establish approval of **1.2.0**. Check the directory page for the new version's synchronization and review status. At that historical check, its [public directory page](https://community.obsidian.md/plugins/inkstone-annotations) showed **Review Satisfactory** and **Health Excellent**, with **Add to Obsidian** available. Open that page → choose **Add to Obsidian** → follow the prompts in Obsidian to install and enable the plugin. GitHub Releases remain a manual installation alternative.
 
 Non-blocking plugin recommendations and CSS warnings remain; they have not all been addressed.
 
-The theme is listed with **Light only** support. Check its [public theme page](https://community.obsidian.md/themes/inkstone) for the **1.4.0** sync and review status. The earlier **1.3.7** review (commit `701b0a6`) completed on **2026-10-21**; that result does not establish approval of 1.4.0. Open the theme page → choose **Add to Obsidian** → follow the prompts in Obsidian to use or select Inkstone. GitHub installation remains an alternative.
+The theme is listed with **Light only** support. Check its [public theme page](https://community.obsidian.md/themes/inkstone) for the **1.5.0** sync and review status. The earlier **1.3.7** review (commit `701b0a6`) completed on **2026-10-21**; that result does not establish approval of 1.5.0. Open the theme page → choose **Add to Obsidian** → follow the prompts in Obsidian to use or select Inkstone. GitHub installation remains an alternative.
 
 The earlier theme review included non-blocking README-language and CSS warnings.
 
@@ -37,9 +37,9 @@ The plugin ID remains `inkstone-annotations`, including for existing manual inst
 
 ### Theme release and submission
 
-The theme uses [obsidian-inkstone](https://github.com/bufan1024/obsidian-inkstone), with `preview.png` as its submission screenshot and **Light only** as the supported color scheme. The latest published theme is **`1.4.0`**, using the bare manifest-version tag and direct **`theme.css`** and **`manifest.json`** release attachments. The same release also provides theme, plugin, and reading-kit ZIPs with a checksum file.
+The theme uses [obsidian-inkstone](https://github.com/bufan1024/obsidian-inkstone), with `preview.png` as its submission screenshot and **Light only** as the supported color scheme. The latest published theme is **`1.5.0`**, using the bare manifest-version tag and direct **`theme.css`** and **`manifest.json`** release attachments. The same release also provides theme, plugin, and reading-kit ZIPs with a checksum file.
 
-The historical `1.3.7` release uses the same commit (`701b0a6`) and runtime files as the retained `v1.3.7` tag. Its reading kit contains theme **1.3.7** and plugin **1.1.7**. Keep those old tags and download assets unchanged; use the **1.4.0** kit for current installations.
+The historical `1.3.7` release uses the same commit (`701b0a6`) and runtime files as the retained `v1.3.7` tag. Its reading kit contains theme **1.3.7** and plugin **1.1.7**. Keep those old tags and download assets unchanged; use the **1.5.0** kit for current installations.
 
 ## Submit through Obsidian Community
 
@@ -59,4 +59,4 @@ After publication, updates use new version releases in the same distribution rep
 - [Developer policies](https://docs.obsidian.md/community-directory/developer-policies)
 - [Directory FAQ and automated review](https://docs.obsidian.md/community-directory/faq)
 
-Requirements last checked against the official documentation on 2026-10-21. Theme submission has its own [official flow](https://docs.obsidian.md/themes/app-themes/submit-theme).
+Requirements last checked against the official documentation on 2026-10-26. Theme submission has its own [official flow](https://docs.obsidian.md/themes/app-themes/submit-theme).

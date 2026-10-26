@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · English
 
-Underlines, four highlight colors, footnote thoughts, a current-note sidebar, and Markdown excerpt export for Obsidian. Plugin **1.2.0** is published; check the plugin marketplace page for this version's synchronization and review status. Companion theme **1.4.0** is published on [GitHub Releases](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.4.0); check the theme marketplace page for its sync and review status. Requires Obsidian **1.10.6 or later**.
+Underlines, four highlight colors, footnote thoughts, a current-note sidebar, and Markdown excerpt export for Obsidian. Plugin **1.2.0** is published; check the plugin marketplace page for this version's synchronization and review status. Companion theme **1.5.0** is published on [GitHub Releases](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.5.0); check the theme marketplace page for its sync and review status. Requires Obsidian **1.10.6 or later**.
 
 Choose **简体中文** or **English** explicitly in the plugin settings. Chinese is the default; the choice does not follow Obsidian's language automatically. This guide includes the default Chinese labels so they remain easy to find.
 
@@ -48,7 +48,7 @@ Use your actual configuration folder if it differs from `.obsidian`. Avoid an ex
 
 For a manual update, quit Obsidian, back up the old files, and replace only the three runtime files above. Keep `data.json`.
 
-The [reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.4.0), `Inkstone-Reading-Kit-1.4.0.zip`, also contains plugin **1.2.0** and theme **1.4.0**.
+The [reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.5.0), `Inkstone-Reading-Kit-1.5.0.zip`, also contains plugin **1.2.0** and theme **1.5.0**.
 
 When using the source repository or reading kit, run this from its root directory:
 
