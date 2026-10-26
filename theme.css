@@ -1,5 +1,5 @@
 /*
- * Inkstone / 墨读 1.4.0 — a quiet, monochrome reading theme.
+ * Inkstone / 墨读 1.5.0 — a quiet, monochrome reading theme.
  * Light mode only. Uses Obsidian's native font overrides and readable-line-width setting.
  * No network resources, scripts, or plugin dependencies. License: MIT.
  */
@@ -8,6 +8,9 @@
 body.theme-light {
   --inkstone-line-height: 1.75;
   --inkstone-line-width: 40em;
+  --inkstone-comic-width: 52rem;
+  --inkstone-comic-shelf-width: 68rem;
+  --inkstone-comic-page-gap: 16px;
   /* A small, shared scale: spacing groups content; strokes identify controls. */
   --inkstone-space-1: 4px;
   --inkstone-space-2: 8px;
@@ -514,6 +517,357 @@ body.theme-light {
   height: auto;
 }
 
+/* Opt-in comic notes use their own width without changing prose preferences. */
+.theme-light :is(.markdown-preview-view, .markdown-source-view.mod-cm6).inkstone-comic {
+  --file-line-width: var(--inkstone-comic-width);
+}
+
+.theme-light :is(.markdown-preview-view, .markdown-source-view.mod-cm6):is(.inkstone-comic-shelf, .inkstone-comic-detail, .inkstone-comic-spread) {
+  --file-line-width: var(--inkstone-comic-shelf-width);
+  --h1-size: 2.5em;
+}
+
+.theme-light .markdown-preview-view:is(.inkstone-comic-shelf, .inkstone-comic-detail, .inkstone-comic-spread) > .markdown-preview-sizer > .el-h1 h1 {
+  margin-block: 0 var(--inkstone-space-3);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.theme-light .markdown-preview-view:is(.inkstone-comic-shelf, .inkstone-comic-detail, .inkstone-comic-spread) > .markdown-preview-sizer > .el-h1 + .el-p > p {
+  max-width: 54ch;
+  color: var(--inkstone-muted);
+  font-family: var(--font-interface);
+  font-size: 0.9em;
+}
+
+/* Keep text metrics intact: image paragraphs may also contain a caption. */
+.theme-light .markdown-preview-view.inkstone-comic > .markdown-preview-sizer > div > p:has(> .image-embed, > img) {
+  margin-block: 0 var(--inkstone-comic-page-gap);
+}
+
+.theme-light .markdown-preview-view.inkstone-comic > .markdown-preview-sizer > div > p > .image-embed {
+  display: block;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.theme-light .markdown-preview-view.inkstone-comic > .markdown-preview-sizer > div > p > img,
+.theme-light .markdown-preview-view.inkstone-comic > .markdown-preview-sizer > div > p > .image-embed img {
+  display: block;
+  margin-inline: auto;
+}
+
+/* Source lines stay editable; seamless webtoon spacing belongs to Reading view. */
+.theme-light .markdown-preview-view.inkstone-comic.inkstone-comic-strip {
+  --inkstone-comic-page-gap: 0px;
+}
+
+/* An editorial catalog: quiet section rules, cover-first books, clear actions. */
+.theme-light .callout[data-callout="comic-shelf"] {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.theme-light .callout[data-callout="comic-shelf"] > .callout-title {
+  padding-block: var(--inkstone-space-3);
+  margin-block-end: var(--inkstone-space-6);
+  border-block-start: 1px solid var(--inkstone-ink);
+  font-size: 0.75em;
+  letter-spacing: 0.06em;
+}
+
+.theme-light .callout:is([data-callout="comic-shelf"], [data-callout="comic"], [data-callout="comic-nav"], [data-callout="comic-info"], [data-callout="comic-chapters"], [data-callout="comic-spread"]) > .callout-title > .callout-icon {
+  display: none;
+}
+
+.theme-light .callout[data-callout="comic-shelf"]:not(.is-collapsed) > .callout-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--inkstone-space-8);
+}
+
+.theme-light .callout[data-callout="comic-shelf"] > .callout-content > :not(.callout[data-callout="comic"]) {
+  grid-column: 1 / -1;
+}
+
+.theme-light .callout[data-callout="comic"] {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.theme-light .callout[data-callout="comic"]:not(.is-collapsed) {
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-light .callout[data-callout="comic"] > .callout-title {
+  padding: 0;
+  margin-block-end: var(--inkstone-space-2);
+  font-family: var(--font-text);
+  font-size: 1.15em;
+  line-height: 1.4;
+}
+
+/* Flatten only the expanded, non-semantic content wrapper for visual ordering.
+ * Native collapse still hides the wrapper and all of its children. */
+.theme-light .callout[data-callout="comic"]:not(.is-collapsed) > .callout-content {
+  display: contents;
+  font-size: 0.9em;
+  line-height: 1.65;
+  color: var(--inkstone-muted);
+}
+
+.theme-light .callout[data-callout="comic"] > .callout-content > p {
+  margin-block: 0 var(--inkstone-space-2);
+}
+
+.theme-light .callout[data-callout="comic"] > .callout-content > p:first-child:has(> .image-embed, > img) {
+  order: -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 3 / 4;
+  min-width: 0;
+  padding: var(--inkstone-space-4);
+  margin-block: 0 var(--inkstone-space-4);
+  background: var(--inkstone-paper-alt);
+  border: 1px solid var(--color-base-25);
+}
+
+.theme-light .callout[data-callout="comic"] > .callout-content > p:first-child > .image-embed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.theme-light .callout[data-callout="comic"] > .callout-content > p:first-child img {
+  display: block;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.theme-light .callout[data-callout="comic"] > .callout-content > p:first-child:has(> .image-embed, > img) + p {
+  font-family: var(--font-interface);
+  font-size: 0.85em;
+  letter-spacing: 0.03em;
+}
+
+.theme-light .callout[data-callout="comic"] > .callout-content > p:last-child {
+  margin-block: auto 0;
+  padding-block-start: var(--inkstone-space-3);
+}
+
+.theme-light .callout[data-callout="comic"] > .callout-content > p:last-child a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  max-width: 100%;
+  color: var(--inkstone-ink);
+  font-family: var(--font-interface);
+  font-weight: 600;
+  border-block-end: 1px solid currentColor;
+  text-decoration: none;
+}
+
+.theme-light .callout[data-callout="comic"] > .callout-content > p:last-child a:hover {
+  background: var(--inkstone-paper-alt);
+}
+
+/* Hand-authored chapter links remain native, focusable links in both views. */
+.theme-light .callout[data-callout="comic-nav"] {
+  padding: var(--inkstone-space-3) var(--inkstone-space-4);
+  border: 0;
+  border-block: 1px solid var(--inkstone-rule);
+  background: var(--inkstone-paper-alt);
+}
+
+.theme-light .callout[data-callout="comic-nav"]:not(.is-collapsed) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--inkstone-space-4);
+  align-items: baseline;
+}
+
+.theme-light .callout[data-callout="comic-nav"] > .callout-title {
+  font-size: 0.75em;
+  letter-spacing: 0.04em;
+}
+
+.theme-light .callout[data-callout="comic-nav"] > .callout-content > p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--inkstone-space-1) var(--inkstone-space-4);
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: 0.85em;
+}
+
+.theme-light .callout[data-callout="comic-nav"] > .callout-content a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  max-width: 100%;
+}
+
+/* A collected work keeps its cover and synopsis together using native callouts. */
+.theme-light .callout:is([data-callout="comic-info"], [data-callout="comic-chapters"], [data-callout="comic-spread"]) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.theme-light .callout:is([data-callout="comic-info"], [data-callout="comic-chapters"], [data-callout="comic-spread"]) > .callout-title {
+  padding-block: var(--inkstone-space-3);
+  margin-block-end: var(--inkstone-space-6);
+  border-block-start: 1px solid var(--inkstone-ink);
+  font-size: 0.75em;
+  letter-spacing: 0.06em;
+}
+
+.theme-light .callout[data-callout="comic-info"]:not(.is-collapsed) > .callout-content {
+  display: grid;
+  grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
+  gap: var(--inkstone-space-8);
+  align-items: start;
+}
+
+.theme-light .callout[data-callout="comic-info"] > .callout-content > p:first-child:has(> .image-embed, > img) {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: var(--inkstone-space-4);
+  border: 1px solid var(--color-base-25);
+  background: var(--inkstone-paper-alt);
+}
+
+.theme-light .callout[data-callout="comic-info"] > .callout-content > p:first-child > .image-embed,
+.theme-light .callout[data-callout="comic-info"] > .callout-content > p:first-child img {
+  display: block;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.theme-light .callout[data-callout="comic-info"] > .callout-content > .callout[data-callout="summary"] {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.theme-light .callout[data-callout="comic-info"] > .callout-content > .callout[data-callout="summary"] > .callout-title {
+  margin-block-end: var(--inkstone-space-4);
+  font-family: var(--font-text);
+  font-size: 1.35em;
+  line-height: 1.45;
+}
+
+.theme-light .callout[data-callout="comic-info"] > .callout-content > .callout[data-callout="summary"] > .callout-title > .callout-icon {
+  display: none;
+}
+
+.theme-light .callout[data-callout="comic-info"] > .callout-content > .callout[data-callout="summary"] > .callout-content > p {
+  margin-block: 0 var(--inkstone-space-4);
+}
+
+.theme-light .callout[data-callout="comic-info"] > .callout-content > .callout[data-callout="summary"] > .callout-content > p:first-child {
+  color: var(--inkstone-muted);
+  font-family: var(--font-interface);
+  font-size: 0.85em;
+}
+
+.theme-light .callout[data-callout="comic-info"] > .callout-content > .callout[data-callout="summary"] > .callout-content > p:last-child {
+  margin-bottom: 0;
+}
+
+.theme-light .callout[data-callout="comic-info"] > .callout-content > .callout[data-callout="summary"] > .callout-content > p:last-child a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  max-width: 100%;
+  margin-inline-end: var(--inkstone-space-4);
+  font-family: var(--font-interface);
+  font-weight: 600;
+}
+
+/* Native ordered lists preserve chapter numbering, link targets, and folding. */
+.theme-light .callout[data-callout="comic-chapters"] > .callout-content > ol {
+  margin: 0;
+  padding-inline-start: 2.5em;
+}
+
+.theme-light .callout[data-callout="comic-chapters"] > .callout-content > ol > li {
+  margin: 0;
+  padding: var(--inkstone-space-2) var(--inkstone-space-2) var(--inkstone-space-2) var(--inkstone-space-1);
+  border-block-end: 1px solid var(--inkstone-rule);
+}
+
+.theme-light .callout[data-callout="comic-chapters"] > .callout-content > ol > li::marker {
+  color: var(--inkstone-faint);
+  font-family: var(--font-monospace);
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-light .callout[data-callout="comic-chapters"] > .callout-content > ol > li > p {
+  margin-block: 0 var(--inkstone-space-2);
+}
+
+.theme-light .callout[data-callout="comic-chapters"] > .callout-content > ol > li a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  max-width: 100%;
+  font-family: var(--font-interface);
+  font-weight: 600;
+}
+
+/* Pair pages in a native callout so Obsidian keeps ownership of note layout.
+ * The callout's own width, not the window, determines whether two pages fit. */
+.theme-light .callout[data-callout="comic-spread"] {
+  container: inkstone-spread / inline-size;
+}
+
+.theme-light .callout[data-callout="comic-spread"]:not(.is-collapsed) > .callout-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--inkstone-comic-page-gap);
+  align-items: start;
+}
+
+.theme-light .callout[data-callout="comic-spread"] > .callout-content > p {
+  min-width: 0;
+  margin: 0;
+}
+
+.theme-light .callout[data-callout="comic-spread"] > .callout-content > :not(p) {
+  grid-column: 1 / -1;
+}
+
+.theme-light .callout[data-callout="comic-spread"] > .callout-content > p > .image-embed,
+.theme-light .callout[data-callout="comic-spread"] > .callout-content > p img {
+  display: block;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+@container inkstone-spread (min-width: 960px) {
+  .theme-light .callout[data-callout="comic-spread"]:not(.is-collapsed) > .callout-content {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @container inkstone-note (max-width: 600px) {
   .theme-light :is(.markdown-preview-view, .markdown-source-view.mod-cm6) {
     --file-margins: var(--inkstone-space-6) clamp(16px, 5cqi, 24px) 48px;
@@ -524,6 +878,24 @@ body.theme-light {
 
   .theme-light .markdown-rendered pre {
     padding-inline: var(--inkstone-space-4);
+  }
+
+  .theme-light :is(.markdown-preview-view, .markdown-source-view.mod-cm6):is(.inkstone-comic-shelf, .inkstone-comic-detail, .inkstone-comic-spread) {
+    --h1-size: 2em;
+  }
+
+  .theme-light .callout[data-callout="comic-shelf"]:not(.is-collapsed) > .callout-content {
+    gap: var(--inkstone-space-6);
+  }
+
+  .theme-light .callout[data-callout="comic-nav"]:not(.is-collapsed) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--inkstone-space-1);
+  }
+
+  .theme-light .callout[data-callout="comic-info"]:not(.is-collapsed) > .callout-content {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--inkstone-space-6);
   }
 }
 
@@ -537,6 +909,27 @@ body.theme-light {
 
   .theme-light :is(.markdown-preview-view, .markdown-source-view.mod-cm6) {
     --file-margins: 0;
+  }
+
+  .theme-light :is(.markdown-preview-view, .markdown-source-view.mod-cm6):is(.inkstone-comic, .inkstone-comic-shelf, .inkstone-comic-detail, .inkstone-comic-spread) {
+    --file-line-width: 100%;
+  }
+
+  .theme-light .callout:is([data-callout="comic-shelf"], [data-callout="comic-chapters"], [data-callout="comic-spread"]) {
+    break-inside: auto;
+  }
+
+  .theme-light .callout[data-callout="comic-chapters"] > .callout-content > ol > li,
+  .theme-light .callout[data-callout="comic-spread"] > .callout-content > p {
+    break-inside: avoid;
+  }
+
+  .theme-light .callout[data-callout="comic-spread"]:not(.is-collapsed) > .callout-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .theme-light .callout[data-callout="comic-shelf"] > .callout-content {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .theme-light .callout,

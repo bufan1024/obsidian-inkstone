@@ -4,9 +4,11 @@
 
 适合中文长文阅读和墨水屏的 Obsidian 浅色主题：安静阅读，随手划线、写想法，再把标注整理成摘录。
 
+Inkstone is a light Obsidian theme for long-form reading and comics. It provides high-contrast typography, cover shelves, work details, chapter links, continuous image reading, and responsive two-page layouts. The theme works without plugins or external resources and follows Obsidian's font settings. The optional Inkstone Annotations plugin adds highlights, underlines, footnote thoughts, and excerpt export.
+
 **[市场安装与更新（推荐）](#安装与更新)** · **[主题市场](https://community.obsidian.md/themes/inkstone)** · **[插件市场](https://community.obsidian.md/plugins/inkstone-annotations)** · **[标注使用说明](annotations/README.md)**
 
-主题 **1.4.0** 已在 [GitHub Release](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.4.0) 发布，市场同步与审核状态以[主题市场页面](https://community.obsidian.md/themes/inkstone)为准。标注插件 **1.2.0** 已在[独立发行仓库](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0)发布，新版本市场同步与审核状态以[插件市场页面](https://community.obsidian.md/plugins/inkstone-annotations)为准。白底、深灰正文，默认 1.75 倍行高、40em 行宽；字体和字号跟随 Obsidian「设置 → 外观」。只想阅读时，可以单独安装纯 CSS 主题。
+主题 **1.5.0** 已在 [GitHub Release](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.5.0) 发布，市场同步与审核状态以[主题市场页面](https://community.obsidian.md/themes/inkstone)为准。标注插件 **1.2.0** 已在[独立发行仓库](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0)发布，新版本市场同步与审核状态以[插件市场页面](https://community.obsidian.md/plugins/inkstone-annotations)为准。白底、深灰正文，默认 1.75 倍行高、40em 行宽；字体和字号跟随 Obsidian「设置 → 外观」。只想阅读时，可以单独安装纯 CSS 主题。
 
 ## 看两段演示就能开始
 
@@ -57,7 +59,7 @@
 
 如果暂时无法使用市场，可使用以下方式。
 
-下载并解压 [Release 合集](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.4.0) 中的 `Inkstone-Reading-Kit-1.4.0.zip`，或克隆仓库。该合集包含主题 **1.4.0** 和插件 **1.2.0**；只更新插件也可使用[独立插件 Release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0)。**先关闭 Obsidian**，在解压目录或仓库目录运行（需要 Python 3）：
+下载并解压 [Release 合集](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.5.0) 中的 `Inkstone-Reading-Kit-1.5.0.zip`，或克隆仓库。该合集包含主题 **1.5.0** 和插件 **1.2.0**；只更新插件也可使用[独立插件 Release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0)。**先关闭 Obsidian**，在解压目录或仓库目录运行（需要 Python 3）：
 
 ```sh
 # 首次安装；可先加 --dry-run 查看计划
@@ -185,6 +187,96 @@ body.theme-light {
 
 </details>
 
+## 漫画书架、作品详情与连续阅读
+
+启用 Inkstone **浅色主题**即可使用，无需标注插件。将[漫画书架示例](examples/漫画书架示例.md)、[作品详情示例](examples/漫画作品详情示例.md)、[漫画连续阅读示例](examples/漫画连续阅读示例.md)、[双页阅读示例](examples/漫画双页阅读示例.md)和整个 [`comics/` 图片目录](examples/comics/)一起复制到笔记库的同一目录，即可打开本地示例。封面和漫画页是项目原创 SVG，采用仓库 MIT 许可，不加载外部图片。
+
+![Inkstone 漫画书架：封面、简介与章节入口](preview-comics.png)
+
+截图来自 macOS Obsidian 1.14.5 的独立示例库。也可查看[作品详情与章节目录截图](preview-comic-detail.png)、[连续阅读与章节导航截图](preview-comic-reading.png)、[双页对照截图](preview-comic-spread.png)。
+
+书架采用独立书店目录式排版：封面置于浅灰纸托，完整展示画面；作品名、章节信息、简介与阅读入口按层级排列。阅读页使用较窄的版心和清楚的章节导航，保留原有白底、灰阶与设备字体。
+
+**封面书架。** 在笔记顶部添加 `cssclasses: [inkstone-comic-shelf]`，用外层 `[!comic-shelf]` 和内层 `[!comic]` Callout 排列封面、简介与章节链接。窄分栏会自动减少列数。每张封面、简介和链接分别成段，段落之间保留空行；首段放封面，随后放章节信息，末段放阅读链接：
+
+```markdown
+---
+cssclasses: [inkstone-comic-shelf]
+---
+
+> [!comic-shelf] 我的书架
+>
+> > [!comic] 漫画名称
+> > ![[封面.jpg]]
+> >
+> > 第 01 话 · 一句简介
+> >
+> > [[漫画第一话|开始阅读 →]]
+```
+
+**作品详情与章节目录。** 为合订本新建笔记，添加 `cssclasses: [inkstone-comic-detail]`。`[!comic-info]` 的首段放封面，随后嵌套原生 `[!summary]` 放简介和阅读入口；宽窗格中左右排布，窄窗格中上下排列。用 `[!comic-chapters]` 和原生有序列表按卷组织章节，链接到章节笔记或笔记内标题：
+
+```markdown
+---
+cssclasses: [inkstone-comic-detail]
+---
+
+# 漫画合订本
+
+> [!comic-info] 作品简介
+> ![[封面.jpg|240]]
+>
+> > [!summary] 一句话介绍作品
+> > 全 2 话 · 简短介绍
+> >
+> > [[漫画第一话|开始阅读 →]] [[漫画书架|返回书架]]
+
+> [!comic-chapters] 第一卷
+> 1. [[漫画第一话|第一话]]
+> 2. [[漫画第二话|第二话]]
+```
+
+示例书架的合订本进入作品详情，前两张卡片仍直接进入章节。阅读页的「作品目录」返回详情页。需要更多卷时，复制章节目录 Callout 并改标题和链接；目录不会自动生成。
+
+**连续阅读。** 在章节笔记顶部添加 `inkstone-comic`，按页序插入本地图片，每张单独一段。阅读视图以适合漫画的版心居中排图，保留完整画面；显式图片宽高仍然有效：
+
+```markdown
+---
+cssclasses: [inkstone-comic]
+---
+
+# 第一话
+
+> [!comic-nav] 章节导航
+> [[漫画书架|← 返回书架]] [[漫画第二话|下一话 →]]
+
+![[漫画/001.jpg]]
+
+![[漫画/002.jpg]]
+
+```
+
+可在章节开头或结尾使用 `[!comic-nav]` 放置目录、前后话或返回书架的原生链接，链接之间用空格分隔；窄分栏会自动换行。
+
+条漫可改用 `cssclasses: [inkstone-comic, inkstone-comic-strip]`，去掉阅读视图中图片段落的页间距。CSS 代码片段可分别设置阅读宽度 `--inkstone-comic-width`（默认 `52rem`）、书架宽度 `--inkstone-comic-shelf-width`（默认 `68rem`）及分页留白 `--inkstone-comic-page-gap`（默认 `16px`）。
+
+**双页对照。** 使用 `cssclasses: [inkstone-comic-spread]`，在每个 `[!comic-spread]` 中按阅读顺序放入两张图片，每张单独成段：
+
+```markdown
+---
+cssclasses: [inkstone-comic-spread]
+---
+
+> [!comic-spread] 一组对页
+> ![[漫画/001.jpg]]
+>
+> ![[漫画/002.jpg]]
+```
+
+Callout 自身的实际可用宽度达到 **960px** 时显示两列，低于此宽度时自动改为单列；宽窗口中的窄分栏也保持单列。图片完整显示，显式尺寸仍然有效。笔记最大宽度沿用 `--inkstone-comic-shelf-width`（默认 `68rem`）。每组图片由你手动配对，不会自动翻页或调整阅读顺序；作品详情页的「双页对照」可以打开本地示例，原有连续阅读入口保留。
+
+书架、作品详情、章节目录和双页对照支持阅读视图和实时预览中已渲染的 Callout；光标进入 Callout 时仍按 Obsidian 原生方式编辑。连续排图与无缝条漫样式用于**阅读视图**，实时预览和源码模式保留原生图片编辑行为。封面、简介和章节链接由你编排；主题不会导入压缩漫画、扫描目录或自动记录阅读进度。语法基于 Obsidian 的[属性](https://obsidian.md/help/properties)、[Callout](https://obsidian.md/help/callouts)和[图片嵌入](https://obsidian.md/help/embeds)。
+
 ## 兼容与验证
 
 最低 Obsidian 版本 **1.10.6**，主要适配浅色模式。本机验证使用 macOS **1.12.4 与 1.14.4**，覆盖阅读视图、实时预览、源码模式、标注交互、安装更新和打包，范围见[验证记录](VALIDATION.md)。窄屏与触控事件测试不等于手机原生应用或实体墨水屏验证，两类设备尚未实测；其他版本及第三方插件界面可能需要单独适配，刷新与残影由设备和系统决定。
@@ -215,6 +307,6 @@ Inkstone [主题](https://community.obsidian.md/themes/inkstone)和[标注插件
 
 ## 设计参考与许可
 
-排版与留白参考 OpenDesign 的 [Paper](https://github.com/nexu-io/open-design/blob/main/design-systems/paper/DESIGN.md)、[Editorial](https://github.com/nexu-io/open-design/blob/main/design-systems/editorial/DESIGN.md)、[Minimal](https://github.com/nexu-io/open-design/blob/main/design-systems/minimal/DESIGN.md)，以留白分层、统一间距和随界面字号缩放的标注文字整理正文、菜单与侧栏，沿用原有字体与配色。结构参考 [Obsidian 官方主题文档](https://docs.obsidian.md/Themes/App+themes/Build+a+theme)。工具条文字动作参考[微信读书官方阅读页](https://weread.qq.com/web/reader/33332bf05cbba0333b1efb4)，按 Obsidian 功能适配。
+排版与留白参考 OpenDesign 的 [Paper](https://github.com/nexu-io/open-design/blob/main/design-systems/paper/DESIGN.md)、[Editorial](https://github.com/nexu-io/open-design/blob/main/design-systems/editorial/DESIGN.md)、[Minimal](https://github.com/nexu-io/open-design/blob/main/design-systems/minimal/DESIGN.md)，以留白分层、统一间距和随界面字号缩放的标注文字整理正文、菜单与侧栏。漫画书架沿用杂志目录的栅格、衬线作品名与克制的细线，保留 Inkstone 的设备字体与灰阶配色。结构参考 [Obsidian 官方主题文档](https://docs.obsidian.md/Themes/App+themes/Build+a+theme)。工具条文字动作参考[微信读书官方阅读页](https://weread.qq.com/web/reader/33332bf05cbba0333b1efb4)，按 Obsidian 功能适配。
 
 [MIT License](LICENSE)。反馈问题请附 Obsidian、Inkstone 主题及标注插件的版本、系统、使用视图、最小笔记片段及其他 CSS 代码片段情况。

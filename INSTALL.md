@@ -1,10 +1,10 @@
 # 安装与更新 Inkstone 墨读
 
-Inkstone 主题 **1.4.0** 已在 [GitHub Release](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.4.0) 发布，标注插件 **1.2.0** 已在[独立发行仓库](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0)发布。主题是纯 CSS，可单独安装；标注、侧栏、摘录导出、快捷条和按屏翻页需要启用插件。最低 Obsidian 版本为 **1.10.6**。
+Inkstone 主题 **1.5.0** 已在 [GitHub Release](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.5.0) 发布，标注插件 **1.2.0** 已在[独立发行仓库](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0)发布。主题是纯 CSS，可单独安装；标注、侧栏、摘录导出、快捷条和按屏翻页需要启用插件。最低 Obsidian 版本为 **1.10.6**。
 
 **社区目录历史状态（2026-10-22）：** 插件 **1.1.8** 自动审核已完成（**Completed**），[公开页面](https://community.obsidian.md/plugins/inkstone-annotations)显示 **Review Satisfactory / Health Excellent**，**Add to Obsidian** 已可用。打开页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示安装并启用插件。下文的 GitHub 安装可作为备选。
 
-主题已上架，仅支持浅色（**Light only**）；**1.4.0** 的市场同步与审核状态以[主题公开页面](https://community.obsidian.md/themes/inkstone)为准。打开主题页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示使用或选择 Inkstone 主题。下文的 GitHub 安装仍可作为备选。
+主题已上架，仅支持浅色（**Light only**）；**1.5.0** 的市场同步与审核状态以[主题公开页面](https://community.obsidian.md/themes/inkstone)为准。打开主题页面 → 点击 **Add to Obsidian** → 在 Obsidian 中按提示使用或选择 Inkstone 主题。下文的 GitHub 安装仍可作为备选。
 
 下文脚本及手动复制操作前，关闭目标笔记库或退出 Obsidian，避免应用退出时覆盖刚更新的文件。请先用 Obsidian 打开过该笔记库，使配置目录存在。以下路径都指**笔记库目录**。
 
@@ -18,7 +18,7 @@ Inkstone 主题 **1.4.0** 已在 [GitHub Release](https://github.com/bufan1024/o
 
 ### 1. 获取文件
 
-下载[已发布 Release](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.4.0) 中的主题与标注合集，文件名为 `Inkstone-Reading-Kit-1.4.0.zip`，包含主题 **1.4.0** 和插件 **1.2.0**。只更新插件也可从[独立插件 Release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0)获取三个运行文件，按下文手动更新。使用合集时，解压后进入其中含有 `scripts/` 的目录。
+下载[已发布 Release](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.5.0) 中的主题与标注合集，文件名为 `Inkstone-Reading-Kit-1.5.0.zip`，包含主题 **1.5.0** 和插件 **1.2.0**。只更新插件也可从[独立插件 Release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0)获取三个运行文件，按下文手动更新。使用合集时，解压后进入其中含有 `scripts/` 的目录。
 
 也可以克隆源码：
 

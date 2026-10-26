@@ -6,7 +6,7 @@ A light Obsidian theme for long reading sessions, with an optional plugin for hi
 
 **[Marketplace installation and updates (recommended)](#install-or-update)** · **[Theme listing](https://community.obsidian.md/themes/inkstone)** · **[Plugin listing](https://community.obsidian.md/plugins/inkstone-annotations)** · **[Annotation guide](annotations/README.en.md)**
 
-Theme **1.4.0** is published on [GitHub Releases](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.4.0); check the [theme marketplace page](https://community.obsidian.md/themes/inkstone) for its sync and review status. Annotation plugin **1.2.0** is published in the [standalone distribution repository](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0); check the plugin marketplace page for this version's synchronization and review status. Requires Obsidian **1.10.6 or later**. Choose Chinese (the default) or English in plugin settings, then restart the plugin to refresh command names. Install the theme and plugin separately from Obsidian's community directory; GitHub Releases and the install script are alternatives.
+Theme **1.5.0** is published on [GitHub Releases](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.5.0); check the [theme marketplace page](https://community.obsidian.md/themes/inkstone) for its sync and review status. Annotation plugin **1.2.0** is published in the [standalone distribution repository](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0); check the plugin marketplace page for this version's synchronization and review status. Requires Obsidian **1.10.6 or later**. Choose Chinese (the default) or English in plugin settings, then restart the plugin to refresh command names. Install the theme and plugin separately from Obsidian's community directory; GitHub Releases and the install script are alternatives.
 
 The theme uses a white background, dark gray text, a default line height of 1.75, and a reading width of 40em. Font and font size follow Obsidian's native Appearance settings. The theme is plain CSS and works without the plugin.
 
@@ -62,7 +62,7 @@ Use this method if the marketplace is temporarily unavailable.
 <details>
 <summary>Expand script and manual installation steps</summary>
 
-Download and extract the [published reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.4.0), `Inkstone-Reading-Kit-1.4.0.zip`, or clone this repository. This kit contains theme **1.4.0** and plugin **1.2.0**. The plugin is also available from its [standalone release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0). Open the target vault in Obsidian at least once so its configuration folder exists, then **quit Obsidian before installing or updating**.
+Download and extract the [published reading kit](https://github.com/bufan1024/obsidian-inkstone/releases/tag/1.5.0), `Inkstone-Reading-Kit-1.5.0.zip`, or clone this repository. This kit contains theme **1.5.0** and plugin **1.2.0**. The plugin is also available from its [standalone release](https://github.com/bufan1024/obsidian-inkstone-annotations/releases/tag/1.2.0). Open the target vault in Obsidian at least once so its configuration folder exists, then **quit Obsidian before installing or updating**.
 
 Run these commands from the extracted kit or repository directory. Python 3 is required; Node.js is not required to install the built files.
 
@@ -232,6 +232,96 @@ Reading and interaction screenshots use macOS Obsidian 1.14.4. Color, grayscale,
 
 </details>
 
+## Comic shelves, details, and continuous reading
+
+Enable the Inkstone **light theme**; the annotation plugin is optional. Copy the [shelf example](examples/漫画书架示例.md), the [work details example](examples/漫画作品详情示例.md), the [reading example](examples/漫画连续阅读示例.md), the [two-page example](examples/漫画双页阅读示例.md), and the entire [`comics/` image folder](examples/comics/) into the same folder in your vault. The original SVG covers and comic pages use the repository's MIT license and load no external images.
+
+![Inkstone comic shelf with covers, descriptions, and chapter links](preview-comics.png)
+
+Screenshot captured in an isolated demo vault on macOS Obsidian 1.14.5. See also the [work details and chapter directory screenshot](preview-comic-detail.png) the [continuous reading and chapter navigation screenshot](preview-comic-reading.png), and the [two-page comparison screenshot](preview-comic-spread.png).
+
+The shelf takes its cues from an independent bookshop catalog: full covers sit on pale paper mats, with distinct typography for titles, chapter information, descriptions, and reading links. Chapter pages use a narrower reading column and clear navigation, retaining Inkstone's white background, grayscale palette, and device fonts.
+
+**Cover shelf.** Add `cssclasses: [inkstone-comic-shelf]` at the top of a note. Use a `[!comic-shelf]` callout containing `[!comic]` cards for covers, descriptions, and chapter links. The grid uses fewer columns in narrow panes. Keep each cover, description, and link in a separate paragraph: place the cover first, chapter information next, and the reading link last:
+
+```markdown
+---
+cssclasses: [inkstone-comic-shelf]
+---
+
+> [!comic-shelf] My shelf
+>
+> > [!comic] Comic title
+> > ![[cover.jpg]]
+> >
+> > Chapter 01 · A short description
+> >
+> > [[Comic chapter 1|Start reading →]]
+```
+
+**Work details and chapter directory.** Create a collected-edition note with `cssclasses: [inkstone-comic-detail]`. In a `[!comic-info]` callout, place the cover in the first paragraph, then nest a native `[!summary]` callout for the description and reading links. Cover and description sit side by side in wide panes and stack in narrow panes. Use `[!comic-chapters]` with a native ordered list to group chapter links by volume:
+
+```markdown
+---
+cssclasses: [inkstone-comic-detail]
+---
+
+# Collected edition
+
+> [!comic-info] About this work
+> ![[cover.jpg|240]]
+>
+> > [!summary] A short introduction
+> > Two chapters · A short description
+> >
+> > [[Comic chapter 1|Start reading →]] [[Comic shelf|Back to shelf]]
+
+> [!comic-chapters] Volume 1
+> 1. [[Comic chapter 1|Chapter 1]]
+> 2. [[Comic chapter 2|Chapter 2]]
+```
+
+The collected edition on the example shelf opens the details page; the first two cards still open their chapters directly. The reading page's “作品目录” link returns to the details page. For more volumes, copy the chapter callout and update its title and links. You maintain the directory yourself.
+
+**Continuous reading.** Add `inkstone-comic` to a chapter note and embed local images in page order, one per paragraph. Reading view centers images in a column suited to comics, preserving full images and explicit image dimensions:
+
+```markdown
+---
+cssclasses: [inkstone-comic]
+---
+
+# Chapter 1
+
+> [!comic-nav] Chapter navigation
+> [[Comic shelf|← Back to shelf]] [[Comic chapter 2|Next chapter →]]
+
+![[comic/001.jpg]]
+
+![[comic/002.jpg]]
+
+```
+
+Use `[!comic-nav]` at the beginning or end of a chapter for native links to the contents, adjacent chapters, or the shelf. Separate links with spaces; they wrap in narrow panes.
+
+For a seamless vertical strip, use `cssclasses: [inkstone-comic, inkstone-comic-strip]` to remove the gaps between image paragraphs in Reading view. CSS snippets can customize reading width with `--inkstone-comic-width` (default `52rem`), shelf width with `--inkstone-comic-shelf-width` (default `68rem`), and page spacing with `--inkstone-comic-page-gap` (default `16px`).
+
+**Two-page comparison.** Use `cssclasses: [inkstone-comic-spread]` and place two page images in each `[!comic-spread]` callout, in reading order, one image per paragraph:
+
+```markdown
+---
+cssclasses: [inkstone-comic-spread]
+---
+
+> [!comic-spread] A pair of pages
+> ![[comic/001.jpg]]
+>
+> ![[comic/002.jpg]]
+```
+
+A callout uses two columns when its own available width reaches **960px**, and one column below that width. A narrow split pane stays in one column even inside a wide window. Images remain uncropped and explicit dimensions are preserved. The note uses `--inkstone-comic-shelf-width` (default `68rem`) as its maximum width. You arrange each pair yourself; the theme does not turn pages or reorder images. Open the local example through “双页对照” on the work details page; the continuous reading links remain available.
+
+Shelf cards, work details, chapter directories, and two-page comparisons work in Reading view and rendered Live Preview callouts. Editing a callout still follows Obsidian's native behavior. Continuous image layouts and seamless strips apply to **Reading view**; Live Preview and source mode retain native image editing. You arrange covers, descriptions, and chapter links yourself. The theme does not import comic archives, scan folders, or track reading progress. The syntax uses Obsidian [properties](https://obsidian.md/help/properties), [callouts](https://obsidian.md/help/callouts), and [image embeds](https://obsidian.md/help/embeds).
+
 ## Compatibility and verification
 
 Inkstone primarily targets light mode. Local verification used macOS Obsidian **1.12.4 and 1.14.4**, covering reading view, Live Preview, source mode, annotation interactions, installation, updates, and packaging. See the [validation record](VALIDATION.md). Narrow-window and synthetic touch tests do not establish support on native mobile apps or physical e-ink devices; neither has been tested. Other Obsidian versions and third-party interfaces may need adjustments. Screen refresh and ghosting depend on the device and operating system.
@@ -266,6 +356,6 @@ The [Inkstone theme](https://community.obsidian.md/themes/inkstone) and [Inkston
 
 ## Design references and license
 
-Typography and spacing draw on OpenDesign's [Paper](https://github.com/nexu-io/open-design/blob/main/design-systems/paper/DESIGN.md), [Editorial](https://github.com/nexu-io/open-design/blob/main/design-systems/editorial/DESIGN.md), and [Minimal](https://github.com/nexu-io/open-design/blob/main/design-systems/minimal/DESIGN.md) systems. Whitespace establishes hierarchy, shared spacing organizes menus and the sidebar, and annotation text scales with interface font size. Existing fonts and colors are retained. Structure is informed by the [official Obsidian theme documentation](https://docs.obsidian.md/Themes/App+themes/Build+a+theme). The compact text-action toolbar takes cues from the [WeRead reading interface](https://weread.qq.com/web/reader/33332bf05cbba0333b1efb4) and is adapted to Obsidian.
+Typography and spacing draw on OpenDesign's [Paper](https://github.com/nexu-io/open-design/blob/main/design-systems/paper/DESIGN.md), [Editorial](https://github.com/nexu-io/open-design/blob/main/design-systems/editorial/DESIGN.md), and [Minimal](https://github.com/nexu-io/open-design/blob/main/design-systems/minimal/DESIGN.md) systems. Whitespace establishes hierarchy, shared spacing organizes menus and the sidebar, and annotation text scales with interface font size. Comic shelves use an editorial grid, serif titles, and restrained rules, retaining Inkstone's device fonts and grayscale palette. Structure is informed by the [official Obsidian theme documentation](https://docs.obsidian.md/Themes/App+themes/Build+a+theme). The compact text-action toolbar takes cues from the [WeRead reading interface](https://weread.qq.com/web/reader/33332bf05cbba0333b1efb4) and is adapted to Obsidian.
 
 [MIT License](LICENSE). For bug reports, include your Obsidian version, operating system, view mode, a minimal note example, and any CSS snippets in use.
